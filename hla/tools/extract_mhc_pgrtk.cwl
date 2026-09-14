@@ -17,7 +17,7 @@ requirements:
   ShellCommandRequirement: {}
   EnvVarRequirement:
     envDef:
-      RAYON_NUM_THREADS: $(inputs.threads)
+      RAYON_NUM_THREADS: $(String(inputs.threads))
 hints:
   DockerRequirement:
     dockerPull: quay.io/biocontainers/pgr-tk:0.5.1--py38hfa1e82d_1
@@ -47,13 +47,13 @@ arguments:
       set -euo pipefail
       P=$(inputs.sample)_$(inputs.haplotype)
       pgr-query --fastx-file -w $(inputs.w) -k $(inputs.k) -r $(inputs.r) --min-span $(inputs.min_span) \
-        --merge-range-tol $(inputs.merge_range_tol) "$(inputs.assembly.path)" "$(inputs.query.path)" $P.pgrq
-      python3 pgr_query_rename.py --hit $P.pgrq.000.hit --fasta $P.pgrq.000.fa \
+        --merge-range-tol $(inputs.merge_range_tol) "$(inputs.assembly.path)" "$(inputs.query.path)" "$P"_pgrq
+      python3 pgr_query_rename.py --hit "$P"_pgrq.000.hit --fasta "$P"_pgrq.000.fa \
         --sample "$(inputs.sample)" --haplotype "$(inputs.haplotype)" \
         --min-piece $(inputs.min_piece) --min-anchors $(inputs.min_anchors) \
         --out-fasta $P.mhc.fa --out-tsv $P.mhc.tsv
-      mv $P.pgrq.000.hit $P.pgrq.hit
+      mv "$P"_pgrq.000.hit "$P"_pgrq.hit
 outputs:
   mhc_fasta: {type: File, outputBinding: {glob: "*.mhc.fa"}}
   mhc_tsv: {type: File, outputBinding: {glob: "*.mhc.tsv"}}
-  hits: {type: File, outputBinding: {glob: "*.pgrq.hit"}}
+  hits: {type: File, outputBinding: {glob: "*_pgrq.hit"}}

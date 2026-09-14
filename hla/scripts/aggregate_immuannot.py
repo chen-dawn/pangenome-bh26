@@ -113,9 +113,19 @@ def main():
     calls["novel"] = calls["consensus"].astype(str).str.endswith(":new") | calls["consensus"].astype(str).str.contains("new")
     calls["allele_2field"] = calls["consensus"].map(lambda x: fields(x, 2))
     calls["allele_3field"] = calls["consensus"].map(lambda x: fields(x, 3))
+    calls["allele_4field"] = calls["consensus"].map(lambda x: fields(x, 4))
+
+    def novel_class(r):
+        if not r["novel"]:
+            return "known"
+        try:
+            return "novel_noncoding" if float(r["cds_distance"]) == 0 else "novel_coding"
+        except (TypeError, ValueError):
+            return "novel_unknown"
+    calls["novel_class"] = calls.apply(novel_class, axis=1)
     calls["hap_id"] = calls["sample"] + "#" + calls["haplotype"]
     cols = ["cohort", "sample", "haplotype", "hap_id", "gene", "contig", "start", "end", "strand", "consensus",
-            "allele_2field", "allele_3field", "novel", "template_allele", "template_distance", "cds_distance",
+            "allele_2field", "allele_3field", "allele_4field", "novel", "novel_class", "template_allele", "template_distance", "cds_distance",
             "template_warning", "alleles", "source"]
     calls = calls[cols].sort_values(["cohort", "sample", "haplotype", "gene", "start"])
     calls.to_csv(os.path.join(a.outdir, "hla_calls.tsv"), sep="\t", index=False)
@@ -200,7 +210,8 @@ def main():
     plt.close(fig)
 
     # novel-allele rate per gene
-    nov = calls[calls["cohort"] != "REF"].groupby(["gene", "cohort"])["novel"].mean().unstack("cohort").fillna(0)
+    nc = calls[calls["cohort"] != "REF"]
+    nov = nc.groupby(["gene", "cohort"])["novel"].mean().unstack("cohort").fillna(0)
     nov = nov.loc[[g for g in wanted if g in nov.index]]
     if not nov.empty:
         fig, ax = plt.subplots(figsize=(max(6, 0.4 * len(nov) + 2), 4))
@@ -209,6 +220,15 @@ def main():
         ax.set_title("Alleles absent from IPD-IMGT/HLA 3.55 (Immuannot 'new')")
         fig.tight_layout()
         fig.savefig(os.path.join(a.outdir, "plots", "novel_allele_rate.png"), dpi=130)
+        plt.close(fig)
+        cls = nc[nc["novel"]].groupby(["gene", "novel_class"]).size().unstack("novel_class").fillna(0)
+        cls = cls.loc[[g for g in wanted if g in cls.index]]
+        fig, ax = plt.subplots(figsize=(max(6, 0.4 * len(cls) + 2), 4))
+        cls.plot.bar(ax=ax, stacked=True, width=0.8)
+        ax.set_ylabel("novel gene copies")
+        ax.set_title("Novel alleles: coding (CDS differs) vs noncoding-only (cf. Ito-Naito et al. 2026)")
+        fig.tight_layout()
+        fig.savefig(os.path.join(a.outdir, "plots", "novel_allele_class.png"), dpi=130)
         plt.close(fig)
 
     # extraction coverage

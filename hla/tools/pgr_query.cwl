@@ -15,7 +15,7 @@ requirements:
   ShellCommandRequirement: {}
   EnvVarRequirement:
     envDef:
-      RAYON_NUM_THREADS: $(inputs.threads)
+      RAYON_NUM_THREADS: $(String(inputs.threads))
 hints:
   DockerRequirement:
     dockerPull: quay.io/biocontainers/pgr-tk:0.5.1--py38hfa1e82d_1
@@ -43,8 +43,8 @@ arguments:
       set -euo pipefail
       G=$(inputs.query.nameroot)
       pgr-query --fastx-file -w $(inputs.w) -k $(inputs.k) -r $(inputs.r) --min-span $(inputs.min_span) \
-        --merge-range-tol $(inputs.merge_range_tol) "$(inputs.database.path)" "$(inputs.query.path)" $G.pgrq
-      python3 pgr_query_rename.py --hit $G.pgrq.000.hit --fasta $G.pgrq.000.fa --gene "$G" \
+        --merge-range-tol $(inputs.merge_range_tol) "$(inputs.database.path)" "$(inputs.query.path)" "$G"_pgrq
+      python3 pgr_query_rename.py --hit "$G"_pgrq.000.hit --fasta "$G"_pgrq.000.fa --gene "$G" \
         --min-piece $(inputs.min_piece) --min-anchors $(inputs.min_anchors) --min-query-frac $(inputs.min_query_frac) \
         --out-fasta $G.fa --out-tsv $G.hits.tsv
 outputs:

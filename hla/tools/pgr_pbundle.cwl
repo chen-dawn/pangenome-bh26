@@ -12,7 +12,7 @@ requirements:
   ShellCommandRequirement: {}
   EnvVarRequirement:
     envDef:
-      RAYON_NUM_THREADS: $(inputs.threads)
+      RAYON_NUM_THREADS: $(String(inputs.threads))
 hints:
   DockerRequirement:
     dockerPull: quay.io/biocontainers/pgr-tk:0.5.1--py38hfa1e82d_1
