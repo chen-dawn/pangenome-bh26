@@ -21,7 +21,10 @@ RULES = [
     ("HPRC_r2", re.compile(r"^([A-Za-z0-9]+)_hap(\d)_hprc_r2.*\.fa(\.gz)?$")),
     ("HPRC_r2", re.compile(r"^([A-Za-z0-9]+)_(pat|mat)_(?:hprc_r2|v1\.0).*\.fa(\.gz)?$")),
     ("HPRC_r2", re.compile(r"^(hg002)v1\.1\.(pat|mat).*\.PanSN\.fa(\.gz)?$")),
-    ("JaSaPaGe", re.compile(r"^(ksa\d+)\.hap(\d)\.asm\.clean\.fasta(\.gz)?$")),
+    # JaSaPaGe assembled Saudi individuals (ksa*) and Japanese 1000G JPT individuals (NA*);
+    # they are reported as separate cohorts <label>-Saudi / <label>-Japanese
+    ("JaSaPaGe", re.compile(r"^(ksa\d+)\.hap(\d)\.asm\.clean\.fasta(\.gz)?$"), "Saudi"),
+    ("JaSaPaGe", re.compile(r"^(NA[0-9]+)\.hifiasm\..*hap(\d)\.clean\.fasta(\.gz)?$"), "Japanese"),
     ("JaSaPaGe", re.compile(r"^([A-Za-z0-9]+)\.hifiasm\..*hap(\d)\.clean\.fasta(\.gz)?$")),
     ("REF", re.compile(r"^(GCA_000001405\.15_GRCh38)_no_alt_analysis_set\.PanSN\.fa(?:\.gz)?$")),
     ("REF", re.compile(r"^(chm13)v2\.0_maskedY_rCRS\.fa\.PanSN\.fa(?:\.gz)?$")),
@@ -30,12 +33,14 @@ HAP = {"pat": "1", "mat": "2"}
 
 
 def classify(fn):
-    for cohort, rx in RULES:
+    for rule in RULES:
+        cohort, rx = rule[0], rule[1]
+        subpop = rule[2] if len(rule) > 2 else None
         m = rx.match(fn)
         if m:
             hap = m.group(2) if m.re.groups > 1 and m.group(2) else "0"
             sample = {"GCA_000001405.15_GRCh38": "GRCh38"}.get(m.group(1), m.group(1))
-            return cohort, sample, HAP.get(hap, hap)
+            return cohort, sample, HAP.get(hap, hap), subpop
     return None
 
 
@@ -54,7 +59,7 @@ def main():
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
 
-    files, samples, haps, cohorts = [], [], [], []
+    files, samples, haps, cohorts, projects = [], [], [], [], []
     skipped = []
     for spec in a.dir:
         label, path = spec.split("=", 1)
@@ -67,9 +72,11 @@ def main():
             if not c:
                 skipped.append(fn)
                 continue
-            rule_cohort, sample, hap = c
+            rule_cohort, sample, hap, subpop = c
             if rule_cohort == "REF":
                 label_use = "REF"
+            elif subpop:
+                label_use = f"{label}-{subpop}"
             else:
                 label_use = label
             if a.per_cohort_limit and label_use != "REF" and cohorts.count(label_use) >= a.per_cohort_limit:
@@ -78,13 +85,14 @@ def main():
             samples.append(sample)
             haps.append(hap)
             cohorts.append(label_use)
+            projects.append(label)
     # the same individual can be assembled by two projects (e.g. 1000G JPT samples in
     # HPRC r2 and JaSaPaGe); suffix the sample with the cohort for later duplicates so
     # sample#haplotype labels stay unique
     seen = {}
-    for i, (smp, hap, co) in enumerate(zip(samples, haps, cohorts)):
+    for i, (smp, hap, co) in enumerate(zip(samples, haps, projects)):
         key = (smp, hap)
-        if key in seen and cohorts[seen[key]] != co:
+        if key in seen and projects[seen[key]] != co:
             samples[i] = f"{smp}.{co}"
             print(f"duplicate sample {smp}#{hap}: {co} relabelled {samples[i]}", file=sys.stderr)
         else:
