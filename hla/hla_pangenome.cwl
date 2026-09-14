@@ -173,7 +173,7 @@ steps:
     scatter: graph
     in:
       graph: gene_graph/og
-    out: [viz, viz_pos]
+    out: [viz, viz_depth]
 
   gene_draw:
     run: tools/odgi_draw.cwl
@@ -210,7 +210,7 @@ steps:
       enabled: build_mhc_graph
       graph: mhc_graph/og
       height: {default: 1500}
-    out: [viz, viz_pos]
+    out: [viz, viz_depth]
 
 outputs:
   mhc_fastas:
@@ -239,7 +239,7 @@ outputs:
   gene_ogs: {type: "File[]", outputSource: gene_graph/og}
   gene_graph_stats: {type: "File[]", outputSource: gene_graph/stats}
   gene_viz_png: {type: "File[]", outputSource: gene_viz/viz}
-  gene_viz_pos_png: {type: "File[]", outputSource: gene_viz/viz_pos}
+  gene_viz_depth_png: {type: "File[]?", outputSource: gene_viz/viz_depth}
   gene_draw_png: {type: "File[]", outputSource: gene_draw/draw}
   mhc_bundle_svg: {type: File, outputSource: mhc_bundle/svg}
   mhc_bundle_html: {type: File, outputSource: mhc_bundle/html}

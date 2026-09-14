@@ -20,7 +20,7 @@ export PATH=$HOME/hla/pgr-tk-bin/release:$HOME/hla/mm/envs/hla/bin:$PATH
 export TMPDIR=${TMPDIR:-$HOME/hla/tmp}
 mkdir -p "$OUT" "$TMPDIR"
 echo "Job ${SLURM_JOB_ID:-local} on $(hostname), $(date)"
-cwltool --parallel --no-container --preserve-environment PATH \
+cwltool --parallel --on-error continue --no-container --preserve-environment PATH \
   --tmpdir-prefix "$TMPDIR/" --tmp-outdir-prefix "$TMPDIR/" \
   --outdir "$OUT" "$WF/hla_pangenome.cwl" "$JOB" > "$OUT/cwl-output.json" 2> "$OUT/cwltool.log"
 echo "done $(date)"

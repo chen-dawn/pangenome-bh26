@@ -28,7 +28,6 @@ inputs:
   immuannot_ref: {type: Directory, doc: "extracted Data-YYYYMMMDD reference bundle"}
   label: {type: string}
   threads: {type: int, default: 4}
-  overlap: {type: float, default: 0.9}
   diff: {type: float, default: 0.03}
 baseCommand: [bash]
 arguments:
@@ -37,7 +36,6 @@ arguments:
   - {prefix: -r, valueFrom: $(inputs.immuannot_ref.path)}
   - {prefix: -o, valueFrom: $(inputs.label)}
   - {prefix: -t, valueFrom: $(inputs.threads)}
-  - {prefix: --overlap, valueFrom: $(inputs.overlap)}
   - {prefix: --diff, valueFrom: $(inputs.diff)}
 stdout: $(inputs.label).immuannot.log
 outputs:

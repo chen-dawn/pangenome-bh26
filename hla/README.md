@@ -72,7 +72,7 @@ and runs `cwltool --parallel --no-container`.
 - `*.gtf.gz`: Immuannot annotation per haplotype
 - `hla_calls.tsv`, `hla_calls_matrix.tsv`, `gene_copy_number.tsv`, `mhc_extraction_summary.tsv`
 - `plots/`: `allele_freq_<GENE>.png`, `allele_diversity.png`, `novel_allele_rate.png`, `gene_copy_number.png`, `mhc_extraction_coverage.png`
-- per gene: `<GENE>.fa` (pgr-query fetch), `<GENE>.hits.tsv`, `<GENE>.svg` / `<GENE>.html` (pgr-tk bundle plot), `<GENE>.bed`, `<GENE>.pmapg.gfa`, `<GENE>.nwk`, `<GENE>.ctg.summary.tsv`, `<GENE>.gfa` / `<GENE>.og` (pggb), `<GENE>.stats.tsv`, `<GENE>.viz.png`, `<GENE>.viz_pos.png`, `<GENE>.draw.png`
+- per gene: `<GENE>.fa` (pgr-query fetch), `<GENE>.hits.tsv`, `<GENE>.svg` / `<GENE>.html` (pgr-tk bundle plot), `<GENE>.bed`, `<GENE>.pmapg.gfa`, `<GENE>.nwk`, `<GENE>.ctg.summary.tsv`, `<GENE>.gfa` / `<GENE>.og` (pggb), `<GENE>.stats.tsv`, `<GENE>.viz.png`, `<GENE>.viz_depth.png`, `<GENE>.draw.png`
 - whole MHC: `MHC.svg` / `MHC.html`, `MHC.bed`, `MHC.pmapg.gfa`, `MHC.nwk`, `MHC.ctg.summary.tsv`; plus `MHC.gfa` / `MHC.og` / `MHC.viz.png` when `build_mhc_graph` is set
 
 ## References

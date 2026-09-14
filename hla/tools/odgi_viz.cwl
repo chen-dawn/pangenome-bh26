@@ -2,7 +2,7 @@
 cwlVersion: v1.2
 class: CommandLineTool
 label: odgi viz 1D rendering of a pangenome graph
-doc: One row per haplotype path, coloured by sample; also a variant-highlighted rendering.
+doc: One row per haplotype path, coloured by sample; plus a node-depth coloured rendering.
 requirements:
   ShellCommandRequirement: {}
   InlineJavascriptRequirement: {}
@@ -24,11 +24,11 @@ arguments:
   - valueFrom: |
       set -euo pipefail
       odgi viz -i "$(inputs.graph.path)" -o $(inputs.graph.nameroot).viz.png -x $(inputs.width) -y $(inputs.height) -a 10 -s '#' -P
-      odgi viz -i "$(inputs.graph.path)" -o $(inputs.graph.nameroot).viz_pos.png -x $(inputs.width) -y $(inputs.height) -a 10 -s '#' -P -du
+      odgi viz -i "$(inputs.graph.path)" -o $(inputs.graph.nameroot).viz_depth.png -x $(inputs.width) -y $(inputs.height) -a 10 -m -P || echo "depth render failed" >&2
 outputs:
   viz:
     type: File
     outputBinding: {glob: "$(inputs.graph.nameroot).viz.png"}
-  viz_pos:
-    type: File
-    outputBinding: {glob: "$(inputs.graph.nameroot).viz_pos.png"}
+  viz_depth:
+    type: File?
+    outputBinding: {glob: "$(inputs.graph.nameroot).viz_depth.png"}
