@@ -91,14 +91,49 @@ steps:
       threads: extract_threads
     out: [mhc_fasta, mhc_tsv]
 
+  select_mhc:
+    doc: |
+      Pick the MHC file lists from whichever source ran: precomputed inputs,
+      the pgr-tk extraction, or the minimap2 extraction. Done in an
+      ExpressionTool because a skipped scattered step yields an array of nulls
+      in some runners, which defeats pickValue: first_non_null.
+    run:
+      class: ExpressionTool
+      requirements:
+        InlineJavascriptRequirement: {}
+      inputs:
+        pre_fa: {type: ["null", {type: array, items: ["null", File]}]}
+        pgr_fa: {type: ["null", {type: array, items: ["null", File]}]}
+        mm2_fa: {type: ["null", {type: array, items: ["null", File]}]}
+        pre_tsv: {type: ["null", {type: array, items: ["null", File]}]}
+        pgr_tsv: {type: ["null", {type: array, items: ["null", File]}]}
+        mm2_tsv: {type: ["null", {type: array, items: ["null", File]}]}
+      outputs:
+        fastas: {type: "File[]"}
+        tsvs: {type: "File[]"}
+      expression: |
+        ${
+          function ok(a) { return a !== null && a !== undefined && a.length > 0 && a.every(function(x){ return x !== null && typeof x === "object"; }); }
+          var fa = [inputs.pre_fa, inputs.pgr_fa, inputs.mm2_fa];
+          var ts = [inputs.pre_tsv, inputs.pgr_tsv, inputs.mm2_tsv];
+          for (var i = 0; i < 3; i++) { if (ok(fa[i])) { return {fastas: fa[i], tsvs: ts[i]}; } }
+          throw "no MHC fasta list available";
+        }
+    in:
+      pre_fa: mhc_fastas
+      pgr_fa: extract_pgrtk/mhc_fasta
+      mm2_fa: extract_minimap2/mhc_fasta
+      pre_tsv: mhc_tsvs
+      pgr_tsv: extract_pgrtk/mhc_tsv
+      mm2_tsv: extract_minimap2/mhc_tsv
+    out: [fastas, tsvs]
+
   immuannot:
     run: tools/immuannot.cwl
     scatter: [contigs, sample, haplotype]
     scatterMethod: dotproduct
     in:
-      contigs:
-        source: [extract_pgrtk/mhc_fasta, extract_minimap2/mhc_fasta, mhc_fastas]
-        pickValue: first_non_null
+      contigs: select_mhc/fastas
       sample: samples
       haplotype: haplotypes
       label:
@@ -112,12 +147,8 @@ steps:
     run: tools/aggregate_immuannot.cwl
     in:
       gtfs: immuannot/gtf
-      mhc_fastas:
-        source: [extract_pgrtk/mhc_fasta, extract_minimap2/mhc_fasta, mhc_fastas]
-        pickValue: first_non_null
-      mhc_tsvs:
-        source: [extract_pgrtk/mhc_tsv, extract_minimap2/mhc_tsv, mhc_tsvs]
-        pickValue: first_non_null
+      mhc_fastas: select_mhc/fastas
+      mhc_tsvs: select_mhc/tsvs
       samples: samples
       haplotypes: haplotypes
       cohorts: cohorts
@@ -138,9 +169,7 @@ steps:
       outputs:
         merged: {type: File, outputBinding: {glob: MHC.fa}}
     in:
-      fastas:
-        source: [extract_pgrtk/mhc_fasta, extract_minimap2/mhc_fasta, mhc_fastas]
-        pickValue: first_non_null
+      fastas: select_mhc/fastas
     out: [merged]
 
   gene_fetch:
@@ -217,10 +246,7 @@ steps:
     out: [viz, viz_depth]
 
 outputs:
-  mhc_fastas_out:
-    type: "File[]"
-    outputSource: [extract_pgrtk/mhc_fasta, extract_minimap2/mhc_fasta, mhc_fastas]
-    pickValue: first_non_null
+  mhc_fastas_out: {type: "File[]", outputSource: select_mhc/fastas}
   mhc_all: {type: File, outputSource: concat_mhc/merged}
   immuannot_gtfs: {type: "File[]", outputSource: immuannot/gtf}
   immuannot_logs: {type: "File[]", outputSource: immuannot/log}
