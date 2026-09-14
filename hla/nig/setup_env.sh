@@ -14,3 +14,6 @@ echo "env ready: $H"
 [ -x pgr-tk-bin/release/pgr-query ] || { curl -sL -o pgr-tk-v0.5.1.zip https://github.com/GeneDx/pgr-tk/releases/download/v0.5.1/pgr-tk-v0.5.1.zip; mkdir -p pgr-tk-bin; (cd pgr-tk-bin && unzip -qo ../pgr-tk-v0.5.1.zip && chmod +x release/*); }
 # Toil CWL runner (cwltool --parallel deadlocks on large scatters)
 [ -x toil/bin/toil-cwl-runner ] || { python3 -m venv toil && toil/bin/pip install -q --upgrade pip && toil/bin/pip install -q "toil[cwl]"; }
+# The Toil venv is first on PATH in run_nig.sbatch, so its python3 runs the
+# aggregation script (--no-container): it needs pandas + matplotlib too.
+toil/bin/python3 -c "import pandas, matplotlib" 2>/dev/null || toil/bin/pip install -q pandas matplotlib
