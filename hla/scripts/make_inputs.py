@@ -77,6 +77,17 @@ def main():
             samples.append(sample)
             haps.append(hap)
             cohorts.append(label_use)
+    # the same individual can be assembled by two projects (e.g. 1000G JPT samples in
+    # HPRC r2 and JaSaPaGe); suffix the sample with the cohort for later duplicates so
+    # sample#haplotype labels stay unique
+    seen = {}
+    for i, (smp, hap, co) in enumerate(zip(samples, haps, cohorts)):
+        key = (smp, hap)
+        if key in seen and cohorts[seen[key]] != co:
+            samples[i] = f"{smp}.{co}"
+            print(f"duplicate sample {smp}#{hap}: {co} relabelled {samples[i]}", file=sys.stderr)
+        else:
+            seen[key] = i
     if a.limit:
         files, samples, haps, cohorts = files[:a.limit], samples[:a.limit], haps[:a.limit], cohorts[:a.limit]
     mhc_fa, mhc_tsv = [], []
