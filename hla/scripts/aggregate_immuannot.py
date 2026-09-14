@@ -161,7 +161,7 @@ def main():
         seq = s_[st:en]
         if r.strand == "-":
             seq = seq.translate(COMP)[::-1]
-        with open(os.path.join(a.outdir, "queries", f"{gene}.fa"), "w") as out:
+        with open(os.path.join(a.outdir, "queries", f"{gene}.query.fa"), "w") as out:
             out.write(f">{gene} source={r.sample}#{r.haplotype}#{r.contig}:{st + 1}-{en}({r.strand}) template={r.template_allele}\n")
             for j in range(0, len(seq), 80):
                 out.write(seq[j:j + 80] + "\n")

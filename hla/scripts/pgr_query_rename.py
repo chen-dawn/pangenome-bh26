@@ -91,7 +91,16 @@ def main():
                 name = f"{sample}#{hap}#{a.gene}{suffix}"
             else:
                 sample, hap = a.sample, a.haplotype
-                name = f"{sample}#{hap}#{h['ctg']}:{h['ctg_bgn'] + 1}-{h['ctg_end']}" + ("_rc" if strand == "-" else "")
+                ctg = h["ctg"]
+                # assemblies that are already PanSN-named (HPRC r2, references) would
+                # otherwise get a second sample#hap# prefix; the sample may carry a
+                # ".cohort" suffix added to disambiguate duplicates across cohorts
+                for base in (sample, sample.rsplit(".", 1)[0]):
+                    pre = f"{base}#{hap}#".lower()
+                    if ctg.lower().startswith(pre):
+                        ctg = ctg[len(pre):]
+                        break
+                name = f"{sample}#{hap}#{ctg}:{h['ctg_bgn'] + 1}-{h['ctg_end']}" + ("_rc" if strand == "-" else "")
             fa.write(f">{name}\n")
             for i in range(0, len(seq), 80):
                 fa.write(seq[i:i + 80] + "\n")

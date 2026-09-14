@@ -29,10 +29,12 @@ inputs:
   extractor: {type: string, default: "pgr-tk", doc: "pgr-tk (pgr-query) or minimap2"}
   mhc_fastas: {type: "File[]?", doc: "precomputed MHC fastas (one per assembly, same order); skips extraction"}
   mhc_tsvs: {type: "File[]?", doc: "precomputed MHC extraction tables matching mhc_fastas"}
+  precomputed_gtfs: {type: "File[]?", doc: "precomputed Immuannot GTFs (one per assembly, same order); skips Immuannot"}
   immuannot_dir: {type: Directory}
   immuannot_ref: {type: Directory}
   graph_genes: {type: string, default: "HLA-A,HLA-B,HLA-C,HLA-E,HLA-F,HLA-G,HLA-DRA,HLA-DRB1,HLA-DRB3,HLA-DRB4,HLA-DRB5,HLA-DQA1,HLA-DQB1,HLA-DPA1,HLA-DPB1,MICA,MICB,TAP1,TAP2,C4A,C4B"}
   gene_flank: {type: int, default: 2000}
+  gene_source: {type: string, default: "immuannot", doc: "immuannot: cut each annotated gene copy out of the MHC haplotypes at the Immuannot coordinates; pgr-query: homology search seeded from one reference allele"}
   extract_threads: {type: int, default: 8}
   immuannot_threads: {type: int, default: 4}
   pggb_threads: {type: int, default: 8}
@@ -132,7 +134,9 @@ steps:
     run: tools/immuannot.cwl
     scatter: [contigs, sample, haplotype]
     scatterMethod: dotproduct
+    when: $(inputs.precomputed == null)
     in:
+      precomputed: precomputed_gtfs
       contigs: select_mhc/fastas
       sample: samples
       haplotype: haplotypes
@@ -143,10 +147,33 @@ steps:
       threads: immuannot_threads
     out: [gtf, log]
 
+  select_gtfs:
+    doc: Precomputed GTFs if given, else the ones Immuannot just produced (see select_mhc).
+    run:
+      class: ExpressionTool
+      requirements:
+        InlineJavascriptRequirement: {}
+      inputs:
+        pre: {type: ["null", {type: array, items: ["null", File]}]}
+        run: {type: ["null", {type: array, items: ["null", File]}]}
+      outputs:
+        gtfs: {type: "File[]"}
+      expression: |
+        ${
+          function ok(a) { return a !== null && a !== undefined && a.length > 0 && a.every(function(x){ return x !== null && typeof x === "object"; }); }
+          if (ok(inputs.pre)) { return {gtfs: inputs.pre}; }
+          if (ok(inputs.run)) { return {gtfs: inputs.run}; }
+          throw "no Immuannot GTFs available";
+        }
+    in:
+      pre: precomputed_gtfs
+      run: immuannot/gtf
+    out: [gtfs]
+
   aggregate:
     run: tools/aggregate_immuannot.cwl
     in:
-      gtfs: immuannot/gtf
+      gtfs: select_gtfs/gtfs
       mhc_fastas: select_mhc/fastas
       mhc_tsvs: select_mhc/tsvs
       samples: samples
@@ -172,19 +199,56 @@ steps:
       fastas: select_mhc/fastas
     out: [merged]
 
+  gene_extract:
+    doc: Default gene source - every annotated copy, cut at the Immuannot coordinates.
+    run: tools/extract_genes.cwl
+    when: $(inputs.source == "immuannot")
+    in:
+      source: gene_source
+      calls: aggregate/calls
+      fasta: concat_mhc/merged
+      genes: graph_genes
+      flank: gene_flank
+    out: [fastas, regions]
+
   gene_fetch:
+    doc: Alternative gene source - pgr-query homology search seeded from a reference allele.
     run: tools/pgr_query.cwl
     scatter: query
+    when: $(inputs.source == "pgr-query")
     in:
+      source: gene_source
       database: concat_mhc/merged
       query: aggregate/gene_queries
     out: [fasta, hits]
+
+  select_genes:
+    run:
+      class: ExpressionTool
+      requirements:
+        InlineJavascriptRequirement: {}
+      inputs:
+        cut: {type: ["null", {type: array, items: ["null", File]}]}
+        fetched: {type: ["null", {type: array, items: ["null", File]}]}
+      outputs:
+        fastas: {type: "File[]"}
+      expression: |
+        ${
+          function ok(a) { return a !== null && a !== undefined && a.length > 0 && a.every(function(x){ return x !== null && typeof x === "object"; }); }
+          if (ok(inputs.cut)) { return {fastas: inputs.cut}; }
+          if (ok(inputs.fetched)) { return {fastas: inputs.fetched}; }
+          throw "no per-gene fastas produced";
+        }
+    in:
+      cut: gene_extract/fastas
+      fetched: gene_fetch/fasta
+    out: [fastas]
 
   gene_bundle:
     run: tools/pgr_pbundle.cwl
     scatter: sequences
     in:
-      sequences: gene_fetch/fasta
+      sequences: select_genes/fastas
       w: gene_bundle_w
       r: gene_bundle_r
       bundle_length_cutoff: gene_bundle_length_cutoff
@@ -195,7 +259,7 @@ steps:
     run: tools/pggb.cwl
     scatter: sequences
     in:
-      sequences: gene_fetch/fasta
+      sequences: select_genes/fastas
       percent_identity: gene_percent_identity
       segment_length: gene_segment_length
       threads: pggb_threads
@@ -248,8 +312,8 @@ steps:
 outputs:
   mhc_fastas_out: {type: "File[]", outputSource: select_mhc/fastas}
   mhc_all: {type: File, outputSource: concat_mhc/merged}
-  immuannot_gtfs: {type: "File[]", outputSource: immuannot/gtf}
-  immuannot_logs: {type: "File[]", outputSource: immuannot/log}
+  immuannot_gtfs: {type: "File[]", outputSource: select_gtfs/gtfs}
+  immuannot_logs: {type: "File[]?", outputSource: immuannot/log}
   hla_calls: {type: File, outputSource: aggregate/calls}
   hla_calls_matrix: {type: File, outputSource: aggregate/calls_matrix}
   gene_copy_number: {type: File, outputSource: aggregate/copy_number}
@@ -257,8 +321,9 @@ outputs:
   gene_list: {type: File, outputSource: aggregate/gene_list}
   gene_queries: {type: "File[]", outputSource: aggregate/gene_queries}
   summary_plots: {type: "File[]", outputSource: aggregate/plots}
-  gene_fastas: {type: "File[]", outputSource: gene_fetch/fasta}
-  gene_hits: {type: "File[]", outputSource: gene_fetch/hits}
+  gene_fastas: {type: "File[]", outputSource: select_genes/fastas}
+  gene_regions: {type: "File[]?", outputSource: gene_extract/regions}
+  gene_hits: {type: "File[]?", outputSource: gene_fetch/hits}
   gene_bundle_svg: {type: "File[]", outputSource: gene_bundle/svg}
   gene_bundle_html: {type: "File[]", outputSource: gene_bundle/html}
   gene_bundle_bed: {type: "File[]", outputSource: gene_bundle/bed}

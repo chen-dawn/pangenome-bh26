@@ -46,6 +46,6 @@ outputs:
   calls_matrix: {type: File, outputBinding: {glob: hla_calls_matrix.tsv}}
   copy_number: {type: File, outputBinding: {glob: gene_copy_number.tsv}}
   extraction_summary: {type: File, outputBinding: {glob: mhc_extraction_summary.tsv}}
-  gene_queries: {type: "File[]", outputBinding: {glob: "queries/*.fa"}}
+  gene_queries: {type: "File[]", outputBinding: {glob: "queries/*.query.fa"}}
   gene_list: {type: File, outputBinding: {glob: genes.txt}}
   plots: {type: "File[]", outputBinding: {glob: "plots/*.png"}}

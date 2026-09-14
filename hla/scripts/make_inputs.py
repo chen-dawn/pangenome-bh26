@@ -48,6 +48,7 @@ def main():
     ap.add_argument("--immuannot-dir", required=True)
     ap.add_argument("--immuannot-ref", required=True)
     ap.add_argument("--mhc-dir", help="directory with precomputed <sample>_<hap>.mhc.fa/.mhc.tsv; skips extraction")
+    ap.add_argument("--gtf-dir", help="directory with precomputed <sample>_<hap>.gtf.gz (Immuannot); skips annotation")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--per-cohort-limit", type=int, default=0, help="keep at most N haplotypes per cohort (references always kept)")
     ap.add_argument("--out", required=True)
@@ -99,6 +100,13 @@ def main():
                 sys.exit(f"missing precomputed MHC files for {smp}#{hap}: {fa}")
             mhc_fa.append({"class": "File", "path": os.path.abspath(fa)})
             mhc_tsv.append({"class": "File", "path": os.path.abspath(tsv)})
+    gtfs = []
+    if a.gtf_dir:
+        for smp, hap in zip(samples, haps):
+            g = os.path.join(a.gtf_dir, f"{smp}_{hap}.gtf.gz")
+            if not os.path.exists(g):
+                sys.exit(f"missing precomputed GTF for {smp}#{hap}: {g}")
+            gtfs.append({"class": "File", "path": os.path.abspath(g)})
     job = {
         "assemblies": files,
         "samples": samples,
@@ -113,6 +121,8 @@ def main():
     if a.mhc_dir:
         job["mhc_fastas"] = mhc_fa
         job["mhc_tsvs"] = mhc_tsv
+    if a.gtf_dir:
+        job["precomputed_gtfs"] = gtfs
     with open(a.out, "w") as fh:
         yaml.safe_dump(job, fh, sort_keys=False)
     print(f"{len(files)} haplotypes written to {a.out}", file=sys.stderr)
