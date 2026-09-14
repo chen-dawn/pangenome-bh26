@@ -1792,16 +1792,16 @@ samples:
 - chm13
 - hg002
 - hg002
-- NA18940
-- NA18940
-- NA18943
-- NA18943
-- NA18945
-- NA18945
-- NA18952
-- NA18952
-- NA18970
-- NA18970
+- NA18940.JaSaPaGe
+- NA18940.JaSaPaGe
+- NA18943.JaSaPaGe
+- NA18943.JaSaPaGe
+- NA18945.JaSaPaGe
+- NA18945.JaSaPaGe
+- NA18952.JaSaPaGe
+- NA18952.JaSaPaGe
+- NA18970.JaSaPaGe
+- NA18970.JaSaPaGe
 - NA18990
 - NA18990
 - NA19007
@@ -4209,25 +4209,25 @@ mhc_fastas:
 - class: File
   path: /home/leechuck/hla/mhc_all/hg002_1.mhc.fa
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18940_1.mhc.fa
+  path: /home/leechuck/hla/mhc_all/NA18940.JaSaPaGe_1.mhc.fa
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18940_2.mhc.fa
+  path: /home/leechuck/hla/mhc_all/NA18940.JaSaPaGe_2.mhc.fa
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18943_1.mhc.fa
+  path: /home/leechuck/hla/mhc_all/NA18943.JaSaPaGe_1.mhc.fa
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18943_2.mhc.fa
+  path: /home/leechuck/hla/mhc_all/NA18943.JaSaPaGe_2.mhc.fa
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18945_1.mhc.fa
+  path: /home/leechuck/hla/mhc_all/NA18945.JaSaPaGe_1.mhc.fa
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18945_2.mhc.fa
+  path: /home/leechuck/hla/mhc_all/NA18945.JaSaPaGe_2.mhc.fa
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18952_1.mhc.fa
+  path: /home/leechuck/hla/mhc_all/NA18952.JaSaPaGe_1.mhc.fa
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18952_2.mhc.fa
+  path: /home/leechuck/hla/mhc_all/NA18952.JaSaPaGe_2.mhc.fa
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18970_1.mhc.fa
+  path: /home/leechuck/hla/mhc_all/NA18970.JaSaPaGe_1.mhc.fa
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18970_2.mhc.fa
+  path: /home/leechuck/hla/mhc_all/NA18970.JaSaPaGe_2.mhc.fa
 - class: File
   path: /home/leechuck/hla/mhc_all/NA18990_1.mhc.fa
 - class: File
@@ -5430,25 +5430,25 @@ mhc_tsvs:
 - class: File
   path: /home/leechuck/hla/mhc_all/hg002_1.mhc.tsv
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18940_1.mhc.tsv
+  path: /home/leechuck/hla/mhc_all/NA18940.JaSaPaGe_1.mhc.tsv
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18940_2.mhc.tsv
+  path: /home/leechuck/hla/mhc_all/NA18940.JaSaPaGe_2.mhc.tsv
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18943_1.mhc.tsv
+  path: /home/leechuck/hla/mhc_all/NA18943.JaSaPaGe_1.mhc.tsv
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18943_2.mhc.tsv
+  path: /home/leechuck/hla/mhc_all/NA18943.JaSaPaGe_2.mhc.tsv
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18945_1.mhc.tsv
+  path: /home/leechuck/hla/mhc_all/NA18945.JaSaPaGe_1.mhc.tsv
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18945_2.mhc.tsv
+  path: /home/leechuck/hla/mhc_all/NA18945.JaSaPaGe_2.mhc.tsv
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18952_1.mhc.tsv
+  path: /home/leechuck/hla/mhc_all/NA18952.JaSaPaGe_1.mhc.tsv
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18952_2.mhc.tsv
+  path: /home/leechuck/hla/mhc_all/NA18952.JaSaPaGe_2.mhc.tsv
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18970_1.mhc.tsv
+  path: /home/leechuck/hla/mhc_all/NA18970.JaSaPaGe_1.mhc.tsv
 - class: File
-  path: /home/leechuck/hla/mhc_all/NA18970_2.mhc.tsv
+  path: /home/leechuck/hla/mhc_all/NA18970.JaSaPaGe_2.mhc.tsv
 - class: File
   path: /home/leechuck/hla/mhc_all/NA18990_1.mhc.tsv
 - class: File
