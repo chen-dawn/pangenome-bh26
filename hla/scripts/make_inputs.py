@@ -23,8 +23,8 @@ RULES = [
     ("HPRC_r2", re.compile(r"^(hg002)v1\.1\.(pat|mat).*\.PanSN\.fa(\.gz)?$")),
     ("JaSaPaGe", re.compile(r"^(ksa\d+)\.hap(\d)\.asm\.clean\.fasta(\.gz)?$")),
     ("JaSaPaGe", re.compile(r"^([A-Za-z0-9]+)\.hifiasm\..*hap(\d)\.clean\.fasta(\.gz)?$")),
-    ("REF", re.compile(r"^(GCA_000001405\.15_GRCh38)_no_alt_analysis_set\.PanSN\.fa(\.gz)?$")),
-    ("REF", re.compile(r"^(chm13)v2\.0_maskedY_rCRS\.fa\.PanSN\.fa(\.gz)?$")),
+    ("REF", re.compile(r"^(GCA_000001405\.15_GRCh38)_no_alt_analysis_set\.PanSN\.fa(?:\.gz)?$")),
+    ("REF", re.compile(r"^(chm13)v2\.0_maskedY_rCRS\.fa\.PanSN\.fa(?:\.gz)?$")),
 ]
 HAP = {"pat": "1", "mat": "2"}
 
@@ -47,6 +47,7 @@ def main():
     ap.add_argument("--region", default="GRCh38#0#chr6:28510120-33480577")
     ap.add_argument("--immuannot-dir", required=True)
     ap.add_argument("--immuannot-ref", required=True)
+    ap.add_argument("--mhc-dir", help="directory with precomputed <sample>_<hap>.mhc.fa/.mhc.tsv; skips extraction")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--per-cohort-limit", type=int, default=0, help="keep at most N haplotypes per cohort (references always kept)")
     ap.add_argument("--out", required=True)
@@ -78,6 +79,15 @@ def main():
             cohorts.append(label_use)
     if a.limit:
         files, samples, haps, cohorts = files[:a.limit], samples[:a.limit], haps[:a.limit], cohorts[:a.limit]
+    mhc_fa, mhc_tsv = [], []
+    if a.mhc_dir:
+        for smp, hap in zip(samples, haps):
+            fa = os.path.join(a.mhc_dir, f"{smp}_{hap}.mhc.fa")
+            tsv = os.path.join(a.mhc_dir, f"{smp}_{hap}.mhc.tsv")
+            if not (os.path.exists(fa) and os.path.exists(tsv)):
+                sys.exit(f"missing precomputed MHC files for {smp}#{hap}: {fa}")
+            mhc_fa.append({"class": "File", "path": os.path.abspath(fa)})
+            mhc_tsv.append({"class": "File", "path": os.path.abspath(tsv)})
     job = {
         "assemblies": files,
         "samples": samples,
@@ -89,6 +99,9 @@ def main():
         "immuannot_dir": {"class": "Directory", "path": os.path.abspath(a.immuannot_dir)},
         "immuannot_ref": {"class": "Directory", "path": os.path.abspath(a.immuannot_ref)},
     }
+    if a.mhc_dir:
+        job["mhc_fastas"] = mhc_fa
+        job["mhc_tsvs"] = mhc_tsv
     with open(a.out, "w") as fh:
         yaml.safe_dump(job, fh, sort_keys=False)
     print(f"{len(files)} haplotypes written to {a.out}", file=sys.stderr)

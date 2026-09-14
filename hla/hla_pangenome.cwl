@@ -27,6 +27,8 @@ inputs:
   mhc_region: {type: string, default: "GRCh38#0#chr6:28510120-33480577", doc: "extended MHC on GRCh38"}
   mhc_flank: {type: int, default: 100000}
   extractor: {type: string, default: "pgr-tk", doc: "pgr-tk (pgr-query) or minimap2"}
+  mhc_fastas: {type: "File[]?", doc: "precomputed MHC fastas (one per assembly, same order); skips extraction"}
+  mhc_tsvs: {type: "File[]?", doc: "precomputed MHC extraction tables matching mhc_fastas"}
   immuannot_dir: {type: Directory}
   immuannot_ref: {type: Directory}
   graph_genes: {type: string, default: "HLA-A,HLA-B,HLA-C,HLA-E,HLA-F,HLA-G,HLA-DRA,HLA-DRB1,HLA-DRB3,HLA-DRB4,HLA-DRB5,HLA-DQA1,HLA-DQB1,HLA-DPA1,HLA-DPB1,MICA,MICB,TAP1,TAP2,C4A,C4B"}
@@ -59,11 +61,12 @@ steps:
 
   extract_pgrtk:
     run: tools/extract_mhc_pgrtk.cwl
-    when: $(inputs.extractor == "pgr-tk")
+    when: $(inputs.extractor == "pgr-tk" && inputs.precomputed == null)
     scatter: [assembly, sample, haplotype]
     scatterMethod: dotproduct
     in:
       extractor: extractor
+      precomputed: mhc_fastas
       assembly: assemblies
       sample: samples
       haplotype: haplotypes
@@ -73,11 +76,12 @@ steps:
 
   extract_minimap2:
     run: tools/extract_mhc.cwl
-    when: $(inputs.extractor == "minimap2")
+    when: $(inputs.extractor == "minimap2" && inputs.precomputed == null)
     scatter: [assembly, sample, haplotype]
     scatterMethod: dotproduct
     in:
       extractor: extractor
+      precomputed: mhc_fastas
       assembly: assemblies
       sample: samples
       haplotype: haplotypes
@@ -93,7 +97,7 @@ steps:
     scatterMethod: dotproduct
     in:
       contigs:
-        source: [extract_pgrtk/mhc_fasta, extract_minimap2/mhc_fasta]
+        source: [extract_pgrtk/mhc_fasta, extract_minimap2/mhc_fasta, mhc_fastas]
         pickValue: first_non_null
       sample: samples
       haplotype: haplotypes
@@ -109,10 +113,10 @@ steps:
     in:
       gtfs: immuannot/gtf
       mhc_fastas:
-        source: [extract_pgrtk/mhc_fasta, extract_minimap2/mhc_fasta]
+        source: [extract_pgrtk/mhc_fasta, extract_minimap2/mhc_fasta, mhc_fastas]
         pickValue: first_non_null
       mhc_tsvs:
-        source: [extract_pgrtk/mhc_tsv, extract_minimap2/mhc_tsv]
+        source: [extract_pgrtk/mhc_tsv, extract_minimap2/mhc_tsv, mhc_tsvs]
         pickValue: first_non_null
       samples: samples
       haplotypes: haplotypes
@@ -135,7 +139,7 @@ steps:
         merged: {type: File, outputBinding: {glob: MHC.fa}}
     in:
       fastas:
-        source: [extract_pgrtk/mhc_fasta, extract_minimap2/mhc_fasta]
+        source: [extract_pgrtk/mhc_fasta, extract_minimap2/mhc_fasta, mhc_fastas]
         pickValue: first_non_null
     out: [merged]
 
@@ -213,9 +217,9 @@ steps:
     out: [viz, viz_depth]
 
 outputs:
-  mhc_fastas:
+  mhc_fastas_out:
     type: "File[]"
-    outputSource: [extract_pgrtk/mhc_fasta, extract_minimap2/mhc_fasta]
+    outputSource: [extract_pgrtk/mhc_fasta, extract_minimap2/mhc_fasta, mhc_fastas]
     pickValue: first_non_null
   mhc_all: {type: File, outputSource: concat_mhc/merged}
   immuannot_gtfs: {type: "File[]", outputSource: immuannot/gtf}
