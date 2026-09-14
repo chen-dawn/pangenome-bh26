@@ -20,11 +20,11 @@ RULES = [
     ("APR", re.compile(r"^(apr[-\w]*?)\.(\d)\.polished\.fa(\.gz)?$")),
     ("HPRC_r2", re.compile(r"^([A-Za-z0-9]+)_hap(\d)_hprc_r2.*\.fa(\.gz)?$")),
     ("HPRC_r2", re.compile(r"^([A-Za-z0-9]+)_(pat|mat)_(?:hprc_r2|v1\.0).*\.fa(\.gz)?$")),
-    ("HPRC_r2", re.compile(r"^(hg002)v1\.1\.(pat|mat).*\.PanSN\.fa$")),
-    ("JaSaPaGe", re.compile(r"^(ksa\d+)\.hap(\d)\.asm\.clean\.fasta$")),
-    ("JaSaPaGe", re.compile(r"^([A-Za-z0-9]+)\.hifiasm\..*hap(\d)\.clean\.fasta$")),
-    ("REF", re.compile(r"^(GCA_000001405\.15_GRCh38)_no_alt_analysis_set\.PanSN\.fa$")),
-    ("REF", re.compile(r"^(chm13)v2\.0_maskedY_rCRS\.fa\.PanSN\.fa$")),
+    ("HPRC_r2", re.compile(r"^(hg002)v1\.1\.(pat|mat).*\.PanSN\.fa(\.gz)?$")),
+    ("JaSaPaGe", re.compile(r"^(ksa\d+)\.hap(\d)\.asm\.clean\.fasta(\.gz)?$")),
+    ("JaSaPaGe", re.compile(r"^([A-Za-z0-9]+)\.hifiasm\..*hap(\d)\.clean\.fasta(\.gz)?$")),
+    ("REF", re.compile(r"^(GCA_000001405\.15_GRCh38)_no_alt_analysis_set\.PanSN\.fa(\.gz)?$")),
+    ("REF", re.compile(r"^(chm13)v2\.0_maskedY_rCRS\.fa\.PanSN\.fa(\.gz)?$")),
 ]
 HAP = {"pat": "1", "mat": "2"}
 
@@ -59,6 +59,8 @@ def main():
         for fn in sorted(os.listdir(path)):
             if fn.endswith((".fai", ".gzi")):
                 continue
+            if fn.endswith((".fa.gz", ".fasta.gz")) and os.path.exists(os.path.join(path, fn[:-3])):
+                continue  # prefer the uncompressed copy while both exist
             c = classify(fn)
             if not c:
                 skipped.append(fn)

@@ -4,17 +4,17 @@ assemblies:
 - class: File
   path: /home/asianhla/data/upload/APR/assemblies/apr-f.2.polished.fa.gz
 - class: File
-  path: /home/asianhla/data/HPRC_r2/fasta/GCA_000001405.15_GRCh38_no_alt_analysis_set.PanSN.fa
+  path: /home/asianhla/data/HPRC_r2/fasta/GCA_000001405.15_GRCh38_no_alt_analysis_set.PanSN.fa.gz
 - class: File
-  path: /home/asianhla/data/HPRC_r2/fasta/HG00097_hap1_hprc_r2_v1.0.1.fa
+  path: /home/asianhla/data/HPRC_r2/fasta/HG00097_hap1_hprc_r2_v1.0.1.fa.gz
 - class: File
-  path: /home/asianhla/data/HPRC_r2/fasta/HG00097_hap2_hprc_r2_v1.0.1.fa
+  path: /home/asianhla/data/HPRC_r2/fasta/HG00097_hap2_hprc_r2_v1.0.1.fa.gz
 - class: File
-  path: /home/asianhla/data/HPRC_r2/fasta/chm13v2.0_maskedY_rCRS.fa.PanSN.fa
+  path: /home/asianhla/data/HPRC_r2/fasta/chm13v2.0_maskedY_rCRS.fa.PanSN.fa.gz
 - class: File
-  path: /home/asianhla/data/JaSaPaGe/assembly_clean/fasta/NA18940.hifiasm.hifi-ont-hic.hap1.clean.fasta
+  path: /home/asianhla/data/JaSaPaGe/assembly_clean/fasta/NA18940.hifiasm.hifi-ont-hic.hap1.clean.fasta.gz
 - class: File
-  path: /home/asianhla/data/JaSaPaGe/assembly_clean/fasta/NA18940.hifiasm.hifi-ont-hic.hap2.clean.fasta
+  path: /home/asianhla/data/JaSaPaGe/assembly_clean/fasta/NA18940.hifiasm.hifi-ont-hic.hap2.clean.fasta.gz
 samples:
 - apr-f
 - apr-f
@@ -27,10 +27,10 @@ samples:
 haplotypes:
 - '1'
 - '2'
-- '0'
+- .gz
 - '1'
 - '2'
-- '0'
+- .gz
 - '1'
 - '2'
 cohorts:
@@ -44,7 +44,7 @@ cohorts:
 - JaSaPaGe
 reference:
   class: File
-  path: /home/asianhla/data/HPRC_r2/fasta/GCA_000001405.15_GRCh38_no_alt_analysis_set.PanSN.fa
+  path: /home/asianhla/data/HPRC_r2/fasta/GCA_000001405.15_GRCh38_no_alt_analysis_set.PanSN.fa.gz
 reference_chrom: GRCh38#0#chr6
 mhc_region: GRCh38#0#chr6:28510120-33480577
 immuannot_dir:
