@@ -21,7 +21,7 @@ for s,h,g,c in alleles:
     import re as _re
     aa=", ".join(_re.sub(r"\((\w+)\)","",a.split(",")[0]).replace("Rrg","Arg").replace("Tre","Thr").replace("<",">") for a in x.aa)
     desc=f"{len(x)} subst."+(" + indels" if (s,g) in with_indels else "")+f": {aa}"
-    rd=reads.get((s,g)); rdtxt=f"{rd[0]}/{rd[1]} reads = assembly base, {rd[1]-rd[0]} = other haplotype" if rd else "no public reads"
+    rd=reads.get((s,g)); rdtxt=f"{rd[0]}/{rd[1]} assembly base, {rd[1]-rd[0]} other hap" if rd else "no public reads"
     rows.append((s,h,g,c,x.closest.iloc[0].replace("HLA-",""),desc,str(priv),"yes" if oth else "no",rdtxt,(s,g) in with_indels))
 tab=pd.DataFrame(rows,columns=["sample","hap","gene","cohort","closest","desc","private","other hap","reads","indel"])
 tab.drop(columns="indel").to_csv("data/novel_alleles_table.tsv",sep="\t",index=False)

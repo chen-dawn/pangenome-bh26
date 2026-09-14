@@ -98,6 +98,22 @@ the references, JaSaPaGe NA*) are not prefixed a second time.
 - per gene: `<GENE>.fa` (gene sequences), `<GENE>.regions.tsv` (Immuannot cut) or `<GENE>.hits.tsv` (pgr-query fetch), `<GENE>.svg` / `<GENE>.html` (pgr-tk bundle plot), `<GENE>.bed`, `<GENE>.pmapg.gfa`, `<GENE>.nwk`, `<GENE>.ctg.summary.tsv`, `<GENE>.gfa` / `<GENE>.og` (pggb), `<GENE>.stats.tsv`, `<GENE>.viz.png`, `<GENE>.viz_depth.png`, `<GENE>.draw.png`
 - whole MHC: `MHC.svg` / `MHC.html`, `MHC.bed`, `MHC.pmapg.gfa`, `MHC.nwk`, `MHC.ctg.summary.tsv`; plus `MHC.gfa` / `MHC.og` / `MHC.viz.png` when `build_mhc_graph` is set
 
+## Analyses on the 610-haplotype run (`analysis/`, `results/`)
+
+`results/figures/CAPTIONS.md` describes the figures; `results/tables/` holds the call table (`hla_calls.tsv.gz`,
+cohorts APR / HPRC_r2 / JaSaPaGe-Saudi / JaSaPaGe-Japanese / REF), copy numbers, class II gene-level haplotype strings,
+novel-allele support and 1000G heterozygosity tracks. Scripts (run inside a directory holding the workflow outputs):
+
+- `analysis/fig5_population.py` - allele-frequency landscape by cohort, DR haplogroups, C4 forms, novel-allele fraction
+- `scripts/read_support.sh` + `analysis/fig3_mhc_homozygosity.py` - MHC-region reads from the public 1000G high-coverage
+  CRAMs realigned to the individual's own assembly (pileup heterozygosity), hap1-vs-hap2 divergence, 1000G SNP density
+- `scripts/novel_alleles.py` + `analysis/fig4_novel_alleles.py` - Immuannot `cds_mut` to contig coordinates, 31-mer
+  search of each novel variant across all haplotypes, base-level read pileups at the novel codons
+- `analysis/classII_flow_pca.py` - gene-level class II haplotype strings, alluvial haplotype flow (all / per cohort),
+  diplotype PCA on two-field alleles (after Chin, ASHI 2023, speakerdeck.com/jchin/human-pangenome-graph-analysis-for-the-mhc)
+- `scripts/extract_span.py` + `tools/pgr_pbundle.cwl` + `analysis/classII_bundles.py` - DRA..DMA span from every
+  haplotype, pgr-tk bundle decomposition, dendrogram coloured by DRB1 group, bundle graph, bundle-presence diplotype PCA
+
 ## References
 
 - pgr-tk: Chin et al., "Multiscale analysis of pangenomes enables improved representation of genomic diversity for repetitive and clinically relevant genes", Nature Methods 2023; https://github.com/GeneDx/pgr-tk (v0.5.1 binaries)
