@@ -64,7 +64,10 @@ sbatch nig/run_nig.sbatch nig/inputs-nig.yml ~/hla/results
 ```
 
 `nig/run_nig.sbatch` requests 28 cores / 200 GB on partition `asianhla-c32`
-and runs `cwltool --parallel --no-container`.
+and runs `toil-cwl-runner --batchSystem single_machine --no-container`.
+cwltool's `--parallel` executor deadlocked after ~390 of the 610 extraction
+jobs (process alive, no children), so Toil is used; pass `restart` as third
+argument to resume from the job store after a failure.
 
 ## Outputs
 

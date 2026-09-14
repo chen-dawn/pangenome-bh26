@@ -12,3 +12,5 @@ export MAMBA_ROOT_PREFIX=$H/mm
 echo "env ready: $H"
 # pgr-tk 0.5.1 command-line binaries (bioconda ships only the Python module)
 [ -x pgr-tk-bin/release/pgr-query ] || { curl -sL -o pgr-tk-v0.5.1.zip https://github.com/GeneDx/pgr-tk/releases/download/v0.5.1/pgr-tk-v0.5.1.zip; mkdir -p pgr-tk-bin; (cd pgr-tk-bin && unzip -qo ../pgr-tk-v0.5.1.zip && chmod +x release/*); }
+# Toil CWL runner (cwltool --parallel deadlocks on large scatters)
+[ -x toil/bin/toil-cwl-runner ] || { python3 -m venv toil && toil/bin/pip install -q --upgrade pip && toil/bin/pip install -q "toil[cwl]"; }
