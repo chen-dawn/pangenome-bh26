@@ -10,3 +10,7 @@ run on the NIG supercomputer BioHackathon node.
 - `data/` provenance notes for the pangenome datasets uploaded to
   `/home/asianhla/data/upload/` on the NIG node (Arab Pangenome Reference,
   Korean pangenome K-PanRef).
+- `1000g_ground_truth/` experimental HLA gold-standard labels for validating
+  `hla/` pipeline calls: Gourraud et al. 2014 Sanger typing of 1,267 1000
+  Genomes samples, and Lai et al. 2024 4-field HPRC labels for 44 samples.
+  See `1000g_ground_truth/README.md`.
