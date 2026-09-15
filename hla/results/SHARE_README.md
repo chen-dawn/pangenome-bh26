@@ -15,11 +15,33 @@ Questions: robert.hoehndorf@kaust.edu.sa
 | HPRC_r2 | 464 | `/home/asianhla/data/HPRC_r2/fasta` |
 | JaSaPaGe-Saudi (ksa001-009) | 18 | `/home/asianhla/data/JaSaPaGe/assembly_clean/fasta` |
 | JaSaPaGe-Japanese (1000G JPT NA*) | 20 | same folder |
+| KPanRef-Korean (K-PanRef, 14 individuals) | 28 | graph only: `/home/asianhla/data/upload/KPanRef/KPanRef.gbz` |
+| CPC-Chinese (CPC Phase 1, 58 individuals) | 116 | graph only: `/home/asianhla/data/CPC/CPC.Phase1.CHM13v2-full.gfa` |
 | REF (GRCh38, CHM13) | 2 | `/home/asianhla/data/HPRC_r2/fasta` |
+
+HPRC r2 is analysed per population (`workflow/data/hprc_r2_populations.tsv`, from the 1000G sequence indexes and the HPRC
+release 2 sample metadata): HPRC-Japanese (JPT, 32 haplotypes), HPRC-Jewish (HG002, Ashkenazi, the only Jewish individual
+in HPRC r2: 2 haplotypes, not a population estimate), HPRC-EastAsian (CHB/CHS/CDX/KHV and HG005, 70), HPRC-Rest (360).
+
+K-PanRef and CPC assemblies are not available as FASTA, so their MHC sequences come from the pangenome graphs:
+`workflow/nig/kpanref_mhc.sbatch` (all haplotype paths of each sample from the GBZ with `vg paths -F`, segments with an
+alignment of >= 50 kb matching bases, MAPQ >= 20, to the GRCh38 MHC) and `workflow/nig/cpc_mhc.sbatch` (odgi extract of
+the CHM13 chr6 28-34 Mb reference nodes, then the span of every CPC haplotype walk through them read from the GFA, same
+filter). HG00438/HG00621/HG00673 in the CPC graph are HPRC samples and are not added again. Both then go through the same
+extraction, Immuannot and downstream steps (`workflow/nig/add_graph_cohorts.sbatch`).
 
 Five JPT individuals (NA18940, NA18943, NA18945, NA18952, NA18970) are in both HPRC r2 and JaSaPaGe; the JaSaPaGe
 copies are labelled `<sample>.JaSaPaGe`. **JaSaPaGe NA18952 is defective: both haplotype files carry the same MHC
 haplotype** (the hap2 file even carries the HPRC contig name JBHIJT010000011.1); use the HPRC assembly instead.
+
+## HLA typing beyond Immuannot
+
+- `fufihla/` - FuFiHLA (Bioinformatics 2026, btag231) full-field typing of HLA-A/B/C/DRB1/DQA1/DQB1 for every assembled
+  individual, from tiled pseudo-HiFi reads of both assembled haplotypes (README inside)
+- `/home/asianhla/data/upload/1000G_MHC/` - all reads aligned to the MHC (same GRCh38 coordinates), chr6 alt haplotypes
+  and HLA allele contigs for the 2504 1000 Genomes high-coverage samples, with T1K typing and the published 1000G HLA
+  genotypes (README inside)
+- `tables/typing_concordance*.tsv`, `figures/fig12_typing_concordance.png` - Immuannot vs FuFiHLA vs T1K vs published
 
 ## What is where
 
@@ -72,4 +94,6 @@ haplotype** (the hap2 file even carries the HPRC contig name JBHIJT010000011.1);
   "new" alleles are typical HiFi homopolymer errors. APR and JaSaPaGe raw reads are not public, so their novel alleles are
   assembly-only.
 - pgr-query homology fetch of genes (alternative `gene_source: pgr-query`) needs w=24/k=32 (class I) or w=16/k=24 (DRB1).
-- HPRC r2 is a mixed-ancestry panel; per-population splitting needs the HPRC metadata.
+- HPRC-Jewish is one individual (HG002); treat its frequencies as anecdotal.
+- K-PanRef and CPC haplotypes are graph paths: Minigraph-Cactus clips unaligned sequence, so large insertions private to a
+  haplotype can be shortened compared with the original assembly.

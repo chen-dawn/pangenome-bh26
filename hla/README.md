@@ -37,12 +37,23 @@ the allele call; `:new` marks alleles absent from IPD-IMGT/HLA.
 (parallel arrays `assemblies`, `samples`, `haplotypes`, `cohorts`). Naming
 rules are in the script docstring; HPRC `pat`/`mat` map to haplotype 1/2.
 The GRCh38 and CHM13 PanSN fastas are picked up as cohort `REF`.
+JaSaPaGe is split into `JaSaPaGe-Saudi` (ksa*) and `JaSaPaGe-Japanese` (1000G JPT NA*). With `--populations
+data/hprc_r2_populations.tsv` HPRC r2 is split by population (1000G sequence indexes + HPRC r2 sample metadata):
+`HPRC-Japanese` (JPT), `HPRC-Jewish` (HG002, Ashkenazi; the only Jewish individual in HPRC r2), `HPRC-EastAsian`
+(CHB, CHS, CDX, KHV, HG005) and `HPRC-Rest`.
+
+K-PanRef (Korean pangenome, 16 samples, Minigraph-Cactus graph; assembly FASTAs not released) is read from the graph:
+`nig/kpanref_mhc.sbatch` pulls every haplotype path of each sample from `KPanRef.gbz` (`vg paths -F`), keeps the path
+segments with an alignment of >= 50 kb matching bases (MAPQ >= 20) to the GRCh38 MHC, and writes
+`<sample>.hap<N>.mhcctg.fa` (cohort `KPanRef-Korean`). `nig/add_kpanref.sbatch` then runs extraction and Immuannot on
+them, adds them to the precomputed MHC/GTF folders and reruns aggregation, gene graphs and the class II span.
 
 ```bash
 python3 scripts/make_inputs.py \
   --dir APR=/home/asianhla/data/upload/APR/assemblies \
   --dir HPRC_r2=/home/asianhla/data/HPRC_r2/fasta \
   --dir JaSaPaGe=/home/asianhla/data/JaSaPaGe/assembly_clean/fasta \
+  --dir KPanRef=~/hla/kpanref/fasta --populations data/hprc_r2_populations.tsv \
   --reference /home/asianhla/data/HPRC_r2/fasta/GCA_000001405.15_GRCh38_no_alt_analysis_set.PanSN.fa \
   --immuannot-dir ~/hla/Immuannot --immuannot-ref ~/hla/Data-2024Feb02 \
   --out nig/inputs-nig.yml            # add --per-cohort-limit 2 for a smoke test
@@ -98,10 +109,11 @@ the references, JaSaPaGe NA*) are not prefixed a second time.
 - per gene: `<GENE>.fa` (gene sequences), `<GENE>.regions.tsv` (Immuannot cut) or `<GENE>.hits.tsv` (pgr-query fetch), `<GENE>.svg` / `<GENE>.html` (pgr-tk bundle plot), `<GENE>.bed`, `<GENE>.pmapg.gfa`, `<GENE>.nwk`, `<GENE>.ctg.summary.tsv`, `<GENE>.gfa` / `<GENE>.og` (pggb), `<GENE>.stats.tsv`, `<GENE>.viz.png`, `<GENE>.viz_depth.png`, `<GENE>.draw.png`
 - whole MHC: `MHC.svg` / `MHC.html`, `MHC.bed`, `MHC.pmapg.gfa`, `MHC.nwk`, `MHC.ctg.summary.tsv`; plus `MHC.gfa` / `MHC.og` / `MHC.viz.png` when `build_mhc_graph` is set
 
-## Analyses on the 610-haplotype run (`analysis/`, `results/`)
+## Analyses (`analysis/`, `results/`)
 
 `results/figures/CAPTIONS.md` describes the figures; `results/tables/` holds the call table (`hla_calls.tsv.gz`,
-cohorts APR / HPRC_r2 / JaSaPaGe-Saudi / JaSaPaGe-Japanese / REF), copy numbers, class II gene-level haplotype strings,
+cohorts APR / JaSaPaGe-Saudi / HPRC-Jewish / JaSaPaGe-Japanese / HPRC-Japanese / KPanRef-Korean / HPRC-EastAsian /
+HPRC-Rest / REF; order, labels and colours in `analysis/cohorts.py`), copy numbers, class II gene-level haplotype strings,
 novel-allele support and 1000G heterozygosity tracks. Scripts (run inside a directory holding the workflow outputs):
 
 - `analysis/fig5_population.py` - allele-frequency landscape by cohort, DR haplogroups, C4 forms, novel-allele fraction

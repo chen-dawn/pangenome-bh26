@@ -4,10 +4,12 @@ Run inside the hla-viz directory (data/novel_coding_support.tsv, data/rs/*.novel
 import pandas as pd, numpy as np, matplotlib
 matplotlib.use("Agg"); import matplotlib.pyplot as plt
 sup=pd.read_csv("data/novel_coding_support.tsv",sep="\t")
+POP=pd.read_csv("data/hprc_r2_populations.tsv",sep="\t").set_index("sample")
+def hprc(s): return f"{POP.analysis_group[s]} ({POP.population[s]})"
 # Immuannot cds_mut letters are assembly-then-known; the extraction script labelled them the other way round
 sup=sup.rename(columns={"known":"assembly_base","asm":"known_base"})
 sup["ok"]=sup.assembly_base==sup.asm_base_check
-alleles=[("apr003","1","HLA-A","APR"),("apr011","1","HLA-C","APR"),("apr001","1","HLA-DRB1","APR"),("apr038","1","HLA-DRB1","APR"),("apr002","1","HLA-DQB1","APR"),("apr015","2","HLA-DPB1","APR"),("HG02717","1","HLA-DQB1","HPRC r2"),("NA20346","2","HLA-DPA1","HPRC r2"),("ksa004","1","HLA-A","JaSaPaGe-Saudi"),("HG03516","2","HLA-DPA1","HPRC r2")]
+alleles=[("apr003","1","HLA-A","APR"),("apr011","1","HLA-C","APR"),("apr001","1","HLA-DRB1","APR"),("apr038","1","HLA-DRB1","APR"),("apr002","1","HLA-DQB1","APR"),("apr015","2","HLA-DPB1","APR"),("HG02717","1","HLA-DQB1",hprc("HG02717")),("NA20346","2","HLA-DPA1",hprc("NA20346")),("ksa004","1","HLA-A","JaSaPaGe-Saudi"),("HG03516","2","HLA-DPA1",hprc("HG03516"))]
 indel_only={("ksa004","HLA-A"):("A*02:01:01:134Q","3 indels only (1-bp deletion, 2 insertions)"),("HG03516","HLA-DPA1"):("DPA1*03:01:01:01","1-bp insertion only")}
 with_indels={("apr038","HLA-DRB1")}
 reads={("HG02717","HLA-DQB1"):(8,14),("NA20346","HLA-DPA1"):(24,51)}
@@ -15,7 +17,7 @@ rows=[]
 for s,h,g,c in alleles:
     x=sup[(sup["sample"]==s)&(sup.gene==g)]
     if (s,g) in indel_only:
-        cl,desc=indel_only[(s,g)]; rows.append((s,h,g,c,cl,desc,"-","-","no public reads" if c!="HPRC r2" else "-",True)); continue
+        cl,desc=indel_only[(s,g)]; rows.append((s,h,g,c,cl,desc,"-","-","no public reads" if not c.startswith("HPRC") else "-",True)); continue
     x=x[x.ok]
     priv=(x.n_other_haps_with_31mer==0).sum(); oth=x.other_hap_of_same_individual.all()
     import re as _re

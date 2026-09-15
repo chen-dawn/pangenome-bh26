@@ -13,6 +13,8 @@ python3 scripts/make_inputs.py \
   --dir APR=/home/asianhla/data/upload/APR/assemblies \
   --dir HPRC_r2=/home/asianhla/data/HPRC_r2/fasta \
   --dir JaSaPaGe=/home/asianhla/data/JaSaPaGe/assembly_clean/fasta \
+  --dir KPanRef=$H/kpanref/fasta \
+  --populations $H/cwl/data/hprc_r2_populations.tsv \
   --reference /home/asianhla/data/HPRC_r2/fasta/GCA_000001405.15_GRCh38_no_alt_analysis_set.PanSN.fa.gz \
   --immuannot-dir $H/Immuannot --immuannot-ref $H/Data-2024Feb02 \
   --mhc-dir "$MHC" --gtf-dir "$GTF" --out nig/inputs-nig-$OUT.yml 2>&1 | grep -v skipped

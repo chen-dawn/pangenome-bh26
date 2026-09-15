@@ -11,6 +11,7 @@ matplotlib.use("Agg"); import matplotlib.pyplot as plt
 import networkx as nx
 from Bio import Phylo
 from io import StringIO
+from cohorts import SHORT, COLOR, present
 
 H = pd.read_csv("data/classII_haplotype_strings.tsv", sep="\t", index_col=0)
 H["DRB1grp"] = H["HLA-DRB1"].str.split(":").str[0]
@@ -50,9 +51,12 @@ for i, h in enumerate(order):
     if r is None: continue
     ax.add_patch(plt.Rectangle((ax.get_xlim()[1] * 0.92, y - 0.5), ax.get_xlim()[1] * 0.03, 1, color=grp_col[r.DRB1grp], lw=0))
     ax.add_patch(plt.Rectangle((ax.get_xlim()[1] * 0.955, y - 0.5), ax.get_xlim()[1] * 0.03, 1, color=drcol[r.DRhap], lw=0))
+    ax.add_patch(plt.Rectangle((ax.get_xlim()[1] * 0.99, y - 0.5), ax.get_xlim()[1] * 0.03, 1, color=COLOR.get(r.cohort, "#000000"), lw=0))
 ax.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=grp_col[g]) for g in groups] + [plt.Rectangle((0, 0), 1, 1, color=drcol[k]) for k in drcol],
           labels=groups + [f"secondary {k}" for k in drcol], fontsize=7, loc="upper left", ncol=2, title="DRB1 group | secondary DRB gene")
-ax.set_title(f"pgr-tk bundle-distance dendrogram of the class II region (DRA..DMA), {len(order)} haplotypes; colour strips: DRB1 group, secondary DRB gene", fontsize=10, loc="left")
+ax.add_artist(ax.get_legend())
+ax.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=COLOR[c]) for c in present(H.cohort)], labels=[SHORT[c] for c in present(H.cohort)], fontsize=7, loc="lower left", title="cohort (third strip)")
+ax.set_title(f"pgr-tk bundle-distance dendrogram of the class II region (DRA..DMA), {len(order)} haplotypes; colour strips: DRB1 group, secondary DRB gene, cohort", fontsize=10, loc="left")
 fig.savefig("figures/fig9_classII_dendrogram.png", dpi=110)
 
 # ---------- cluster / gene-level association: cut the tree into clusters at a distance threshold
@@ -114,7 +118,7 @@ for line in open("data/classII/classII.ord"):
 B = pd.DataFrame(vec).T
 B = B.loc[[h for h in B.index if h in H.index]]
 X = B.values - B.values.mean(0); U, S, Vt = np.linalg.svd(X, full_matrices=False); pc = U[:, :2] * S[:2]; ev = S ** 2 / np.sum(S ** 2)
-fig, ax = plt.subplots(figsize=(10, 8.5))
+fig, (ax, ax2) = plt.subplots(1, 2, figsize=(19, 8.5))
 samp = pd.Series([h.split("#")[0] for h in B.index], index=B.index)
 for smp, idx in samp.groupby(samp).groups.items():
     if len(idx) == 2: ax.plot(pc[[B.index.get_loc(i) for i in idx], 0], pc[[B.index.get_loc(i) for i in idx], 1], color="#bbbbbb", lw=0.5, zorder=1)
@@ -125,6 +129,10 @@ for grp, g in H.loc[B.index].groupby("DRB1grp"):
     if len(g) >= 8:
         ii = [B.index.get_loc(i) for i in g.index]; ax.text(np.median(pc[ii, 0]), np.median(pc[ii, 1]), grp, fontsize=8, ha="center", va="center", bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.7))
 ax.set_xlabel(f"PC1 ({ev[0]*100:.1f}%)"); ax.set_ylabel(f"PC2 ({ev[1]*100:.1f}%)"); ax.legend(fontsize=8)
+coh = H.loc[B.index, "cohort"].values
+for c in present(coh)[::-1]:
+    m = coh == c; ax2.scatter(pc[m, 0], pc[m, 1], s=16 if c == "HPRC-Rest" else 24, color=COLOR[c], alpha=0.55 if c == "HPRC-Rest" else 0.9, zorder=1 if c == "HPRC-Rest" else 2, edgecolors="none", label=f"{SHORT[c]} (n={m.sum()})")
+ax2.set_xlabel(f"PC1 ({ev[0]*100:.1f}%)"); ax2.set_ylabel(f"PC2 ({ev[1]*100:.1f}%)"); ax2.legend(fontsize=8); ax2.set_title("Same PCA coloured by cohort", fontsize=10)
 ax.set_title(f"Diplotype PCA on pgr-tk principal-bundle presence in the class II region ({B.shape[1]} bundles, {len(B)} haplotypes)\nlines join the two haplotypes of an individual; labels = DRB1 allele group", fontsize=10)
 fig.tight_layout(); fig.savefig("figures/fig11_classII_bundle_pca.png", dpi=160)
 print("bundle matrix", B.shape)

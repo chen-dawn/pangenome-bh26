@@ -7,7 +7,14 @@ Naming rules:
            SAMPLE_{pat,mat}_hprc_r2_*.fa           -> pat=1, mat=2 (HPRC convention)
   JaSaPaGe ksaNNN.hapN.asm.clean.fasta            -> hap N
            NAxxxxx.hifiasm.*.hapN.clean.fasta      -> hap N
+  KPanRef  <sample>.hapN.mhcctg.fa                  -> hap N (MHC-aligning haplotype path segments pulled from the
+                                                       K-PanRef Minigraph-Cactus GBZ, nig/kpanref_mhc.sbatch)
+  CPC      <sample>.hapN.mhcctg.fa                  -> hap N (MHC haplotype sequences cut from the CPC Phase 1
+                                                       graph with odgi extract, nig/cpc_mhc.sbatch)
   REF      GRCh38 / CHM13 PanSN fasta               -> cohort REF, hap 0
+
+HPRC r2 is split by population with --populations (data/hprc_r2_populations.tsv, column analysis_group):
+HPRC-Japanese (JPT), HPRC-Jewish (HG002, Ashkenazi), HPRC-EastAsian (other EAS), HPRC-Rest.
 """
 import argparse
 import os
@@ -26,6 +33,8 @@ RULES = [
     ("JaSaPaGe", re.compile(r"^(ksa\d+)\.hap(\d)\.asm\.clean\.fasta(\.gz)?$"), "Saudi"),
     ("JaSaPaGe", re.compile(r"^(NA[0-9]+)\.hifiasm\..*hap(\d)\.clean\.fasta(\.gz)?$"), "Japanese"),
     ("JaSaPaGe", re.compile(r"^([A-Za-z0-9]+)\.hifiasm\..*hap(\d)\.clean\.fasta(\.gz)?$")),
+    ("KPanRef", re.compile(r"^(KOREF\d+|KPanRef-\d+(?:-[MP])?)\.hap(\d)\.mhcctg\.fa(\.gz)?$"), "Korean"),
+    ("CPC", re.compile(r"^(HIFI\d+D|RY\d+)\.hap(\d)\.mhcctg\.fa(\.gz)?$"), "Chinese"),
     ("REF", re.compile(r"^(GCA_000001405\.15_GRCh38)_no_alt_analysis_set\.PanSN\.fa(?:\.gz)?$")),
     ("REF", re.compile(r"^(chm13)v2\.0_maskedY_rCRS\.fa\.PanSN\.fa(?:\.gz)?$")),
 ]
@@ -54,11 +63,18 @@ def main():
     ap.add_argument("--immuannot-ref", required=True)
     ap.add_argument("--mhc-dir", help="directory with precomputed <sample>_<hap>.mhc.fa/.mhc.tsv; skips extraction")
     ap.add_argument("--gtf-dir", help="directory with precomputed <sample>_<hap>.gtf.gz (Immuannot); skips annotation")
+    ap.add_argument("--populations", help="TSV with columns sample, analysis_group; replaces the HPRC_r2 cohort label per sample")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--per-cohort-limit", type=int, default=0, help="keep at most N haplotypes per cohort (references always kept)")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
 
+    popgroup = {}
+    if a.populations:
+        import csv
+        with open(a.populations) as fh:
+            for r in csv.DictReader(fh, delimiter="\t"):
+                popgroup[r["sample"]] = r["analysis_group"]
     files, samples, haps, cohorts, projects = [], [], [], [], []
     skipped = []
     for spec in a.dir:
@@ -77,6 +93,10 @@ def main():
                 label_use = "REF"
             elif subpop:
                 label_use = f"{label}-{subpop}"
+            elif rule_cohort == "HPRC_r2" and popgroup:
+                if sample not in popgroup:
+                    sys.exit(f"HPRC sample {sample} missing from {a.populations}")
+                label_use = popgroup[sample]
             else:
                 label_use = label
             if a.per_cohort_limit and label_use != "REF" and cohorts.count(label_use) >= a.per_cohort_limit:
