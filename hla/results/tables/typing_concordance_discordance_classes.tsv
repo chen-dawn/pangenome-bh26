@@ -1,0 +1,7 @@
+gene	FuFiHLA artefact (consensus not present in the assembly)	FuFiHLA exact allele, Immuannot novel (newer IPD-IMGT/HLA release)	both novel (no exact IPD-IMGT/HLA match)	concordant (2-field)	discordant
+HLA-A	2	0	11	362	1
+HLA-B	0	1	0	375	0
+HLA-C	0	1	2	373	0
+HLA-DQA1	5	0	1	370	0
+HLA-DQB1	2	1	2	370	1
+HLA-DRB1	10	0	19	347	0
