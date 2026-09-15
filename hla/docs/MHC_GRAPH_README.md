@@ -37,6 +37,10 @@ vg giraffe -t 16 -Z MHC.gbz -d MHC.dist -m MHC.shortread.withzip.min -z MHC.shor
   -f r1.fq.gz -f r2.fq.gz -o gaf > HG00096.gaf
 ```
 
+Decoding the CRAMs needs `GRCh38_full_analysis_set_plus_decoy_hla.fa`. The copy under `/usr/local/shared_data/` is visible
+from a001 and the epyc/medium nodes but not from the asianhla node; a readable copy with index is at
+`/home/leechuck/hla/ref1kg/local/GRCh38_full_analysis_set_plus_decoy_hla.fa`.
+
 Use the vg bundled with Cactus 3.3.0 (`~leechuck/hla/cactus/cactus-bin-v3.3.0/bin/vg`) or a vg version that reads these
 indexes. Reference paths are `GRCh38#0#ctg<N>` / `CHM13#0#ctg<N>`; `contig_names.tsv` gives the GRCh38 MHC coordinates.
 
