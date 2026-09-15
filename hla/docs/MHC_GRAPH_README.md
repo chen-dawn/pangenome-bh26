@@ -41,6 +41,9 @@ Decoding the CRAMs needs `GRCh38_full_analysis_set_plus_decoy_hla.fa`. The copy 
 from a001 and the epyc/medium nodes but not from the asianhla node; a readable copy with index is at
 `/home/leechuck/hla/ref1kg/local/GRCh38_full_analysis_set_plus_decoy_hla.fa`.
 
+If giraffe stops with "MHC.dist is newer than MHC.shortread.withzip.min which depends on it" (file copies can reorder
+timestamps; the contents are fine), run `touch MHC.shortread.withzip.min MHC.shortread.zipcodes` in a writable copy.
+
 Use the vg bundled with Cactus 3.3.0 (`~leechuck/hla/cactus/cactus-bin-v3.3.0/bin/vg`) or a vg version that reads these
 indexes. Reference paths are `GRCh38#0#ctg<N>` / `CHM13#0#ctg<N>`; `contig_names.tsv` gives the GRCh38 MHC coordinates.
 
