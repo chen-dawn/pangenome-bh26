@@ -1,0 +1,86 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+\usetheme{default}
+\usecolortheme{seagull}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+\setbeamerfont{title}{size=\Large,series=\bfseries}
+\usepackage{graphicx}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily\scriptsize,breaklines=true,columns=fullflexible,keepspaces=true}
+
+\title{Whole-MHC pangenome graph of 754 haplotypes: where it is and how to map reads to it}
+\author{Robert Hoehndorf (KAUST)}
+\institute{BioHackathon Japan 2026, HLA/pangenome group}
+\date{15 September 2026}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{One graph holds the MHC of 754 haplotypes from five pangenome projects}
+  \begin{itemize}
+    \item Haplotypes: APR (UAE Arab) 106, HPRC release 2 464, JaSaPaGe (Saudi, Japanese) 38, K-PanRef (Korean) 28, CPC (Chinese) 116, GRCh38, CHM13
+    \item Input: the MHC segment cut from each haplotype by our HLA workflow (GRCh38 chr6:28.4--33.6 Mb with flanks)
+    \item Built with Minigraph-Cactus (Cactus 3.3.0) on the NIG supercomputer: 3 h 43 min, 32 cores
+    \item Reference path \texttt{GRCh38\#0\#ctg1} = GRCh38 chr6:28,410,701--33,580,488 (graph position + 28,410,700 = chr6 coordinate)
+    \item Graph: 417,896 nodes, 579,137 edges, 5.9 Mb of sequence
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{All files are in one team folder on the NIG supercomputer}
+  \texttt{/home/asianhla/data/upload/HLA/mhc\_graph/}
+  \begin{itemize}
+    \item Mapping: \texttt{MHC.gbz} (graph with haplotypes, clipped), \texttt{MHC.dist}, \texttt{MHC.shortread.withzip.min}, \texttt{MHC.shortread.zipcodes} (vg giraffe indexes)
+    \item Other formats: \texttt{MHC.gfa.gz}, \texttt{MHC.full.gbz} / \texttt{.full.gfa.gz} / \texttt{.full.og} (unclipped), \texttt{MHC.full.hal} (Cactus alignment)
+    \item Variants: \texttt{MHC.vcf.gz} against GRCh38 (reference path ctg1)
+    \item \texttt{contig\_names.tsv}: renamed contigs (\texttt{ctg<N>}) back to original names and coordinates; \texttt{README.md}: details
+    \item Reads to map: \texttt{/home/asianhla/data/upload/1000G\_MHC/cram/<sample>.mhc.cram}, 2,504 1000 Genomes samples (in progress)
+    \item vg: \texttt{/home/leechuck/hla/cactus/cactus-bin-v3.3.0/bin/vg} (version 1.76.1)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Two commands map a 1000 Genomes sample to the graph (GAF or BAM)}
+\begin{lstlisting}
+# run in a Slurm job (sbatch -c 8 --mem=48G); this reference copy is readable from all nodes
+REF=/home/leechuck/hla/ref1kg/local/GRCh38_full_analysis_set_plus_decoy_hla.fa
+VG=/home/leechuck/hla/cactus/cactus-bin-v3.3.0/bin/vg
+G=/home/asianhla/data/upload/HLA/mhc_graph
+IDX="-Z $G/MHC.gbz -d $G/MHC.dist \
+     -m $G/MHC.shortread.withzip.min -z $G/MHC.shortread.zipcodes"
+CRAM=/home/asianhla/data/upload/1000G_MHC/cram/HG00096.mhc.cram
+
+# 1. reads from the MHC CRAM
+samtools collate -u -O --reference $REF $CRAM tmp \
+  | samtools fastq -F 0x900 --reference $REF -1 r1.fq.gz -2 r2.fq.gz \
+      -0 /dev/null -s /dev/null -n -
+
+# 2a. align to the graph, graph coordinates (GAF)
+$VG giraffe -t 8 $IDX -f r1.fq.gz -f r2.fq.gz -o gaf > HG00096.gaf
+
+# 2b. or BAM on contig GRCh38#0#ctg1 (chr6 position = position + 28,410,700)
+$VG giraffe -t 8 $IDX -f r1.fq.gz -f r2.fq.gz -o BAM | samtools sort -o HG00096.graph.bam -
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Test: 99.5\% of HG00096 MHC read pairs align in 26 seconds}
+  \begin{itemize}
+    \item Input: all 657,052 read pairs that bwa had placed in the MHC, chr6 alternative haplotypes or HLA contigs (1000G high-coverage CRAM of HG00096)
+    \item vg giraffe, 8 threads: 26 s, 0.7 GB memory
+    \item 654,059 pairs (99.5\%) aligned; 625,590 (95.2\%) with MAPQ $\ge$ 20
+    \item Script: \texttt{mhc\_graph/giraffe\_test.sh}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Four points to check before using the graph}
+  \begin{itemize}
+    \item The graph covers only the MHC: reads from HLA-like sequence elsewhere in the genome can be forced onto it; start from reads already placed in the MHC
+    \item giraffe refuses to start if \texttt{MHC.dist} is newer than the minimizer index (after copying files): \texttt{touch MHC.shortread.withzip.min MHC.shortread.zipcodes}
+    \item CHM13 is a haplotype path (\texttt{chm13\#0\#ctg1\#0}), not a second reference; K-PanRef and CPC haplotypes come from their own graphs, not from assemblies; JaSaPaGe NA18952 carries one haplotype twice
+    \item Workflow and job scripts: \texttt{github.com/leechuck/pangenome-bh26} (\texttt{hla/nig/mhc\_mc\_graph.sbatch}); questions: robert.hoehndorf@kaust.edu.sa
+  \end{itemize}
+\end{frame}
+
+\end{document}
