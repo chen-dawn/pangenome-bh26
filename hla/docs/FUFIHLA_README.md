@@ -8,8 +8,9 @@ is run on the assembled sequence itself:
 - both assembled MHC haplotypes of an individual (`<sample>_1.mhc.fa`, `<sample>_2.mhc.fa`, the same MHC fastas that
   Immuannot annotated) are tiled into error-free 15 kb pseudo-HiFi reads every 1.5 kb (10x per haplotype;
   `workflow/scripts/tile_reads.py`), and the combined diploid read set is typed with
-  `fufihla --fa reads.fa.gz --out <sample> --refdir ref_data` (reference alleles from `fufihla-ref-prep`, IPD-IMGT/HLA
-  as downloaded on 2026-09-15)
+  `fufihla --fa reads.fa.gz --out <sample> --refdir ref_data` (reference alleles from `fufihla-ref-prep`:
+  IPD-IMGT/HLA 3.65.0, whereas Immuannot's database is IPD-IMGT/HLA 3.55; many sequences that Immuannot reports as
+  `:new` have since been named, e.g. DRB1*09:59, DRB1*14:06:01, A*24:608N)
 - check on HG002: all 12 alleles identical to Immuannot at full resolution (including the novel DRB1*04:02:01 variant)
 - reference genomes (GRCh38, CHM13; single haplotype) are not typed
 
