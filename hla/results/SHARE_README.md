@@ -72,6 +72,10 @@ haplotype** (the hap2 file even carries the HPRC contig name JBHIJT010000011.1);
   copy numbers, novel alleles, class II haplotype strings, cluster purity, typing concordance, HPRC population table;
   `slides/` - summary deck (`hla_summary.pdf`, results and methods, 26 slides)
 - `results-610/` - the earlier 610-haplotype run (before HPRC split, K-PanRef and CPC)
+- `mhc_graph/` - whole-MHC Minigraph-Cactus pangenome graph of all 754 haplotypes (GRCh38 reference) with vg giraffe indexes
+  (`MHC.gbz`, `MHC.dist`, `MHC.shortread.withzip.min`, `MHC.shortread.zipcodes`), GFA/odgi/HAL, VCF against GRCh38 (README inside)
+- `fufihla/` - FuFiHLA typing of every assembled individual (README inside); `/home/asianhla/data/upload/1000G_MHC/` - 1000G MHC reads
+  and T1K typing (README inside)
 - `workflow/` - copy of the repository directory `hla/` (CWL workflow, tools, scripts, analysis scripts, README)
 
 ## How it was generated
