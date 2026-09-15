@@ -13,6 +13,11 @@ alleles=[("apr003","1","HLA-A","APR"),("apr011","1","HLA-C","APR"),("apr001","1"
 indel_only={("ksa004","HLA-A"):("A*02:01:01:134Q","3 indels only (1-bp deletion, 2 insertions)"),("HG03516","HLA-DPA1"):("DPA1*03:01:01:01","1-bp insertion only")}
 with_indels={("apr038","HLA-DRB1")}
 reads={("HG02717","HLA-DQB1"):(8,14),("NA20346","HLA-DPA1"):(24,51)}
+# checked against IPD-IMGT/HLA 3.65 (Immuannot uses 3.55): HG02717's coding sequence (exons 2-6) equals DQB1*02:180:02,
+# created in release 3.56 (Feb 2024), and the HPRC truth set (Lai et al. 2024) calls DQB1*02:180; NA20346's DPA1 has no
+# exact coding match in 3.65 (closest DPA1*03:02:02, 1 substitution in exon 2)
+named_later={("HG02717","HLA-DQB1"):"Ala>Asp vs 02:02:01; = DQB1*02:180:02 (named in IPD-IMGT/HLA 3.56), not novel",
+             ("NA20346","HLA-DPA1"):"Ala>Met vs 01:03:01; still novel in 3.65 (closest 03:02:02, 1 subst.)"}
 rows=[]
 for s,h,g,c in alleles:
     x=sup[(sup["sample"]==s)&(sup.gene==g)]
@@ -24,6 +29,7 @@ for s,h,g,c in alleles:
     aa=", ".join(_re.sub(r"\((\w+)\)","",a.split(",")[0]).replace("Rrg","Arg").replace("Tre","Thr").replace("<",">") for a in x.aa)
     desc=f"{len(x)} subst."+(" + indels" if (s,g) in with_indels else "")+f": {aa}"
     rd=reads.get((s,g)); rdtxt=f"{rd[0]}/{rd[1]} assembly base, {rd[1]-rd[0]} other hap" if rd else "no public reads"
+    if (s,g) in named_later: desc=named_later[(s,g)]
     rows.append((s,h,g,c,x.closest.iloc[0].replace("HLA-",""),desc,str(priv),"yes" if oth else "no",rdtxt,(s,g) in with_indels))
 tab=pd.DataFrame(rows,columns=["sample","hap","gene","cohort","closest","desc","private","other hap","reads","indel"])
 tab.drop(columns="indel").to_csv("data/novel_alleles_table.tsv",sep="\t",index=False)
@@ -52,7 +58,7 @@ def pileup(ax,fn,pos,title):
         a,n=max(alt.items(),key=lambda kv:kv[1])
         if n>=3 and n/c.depth>=0.2: ax.text(j,bottom[j]+1,f"{c.ref}/{a}",fontsize=6,ha="center",rotation=90)
     ax.legend(handles=[plt.Rectangle((0,0),1,1,color=cols[b]) for b in "ACGT"],labels=list("ACGT"),fontsize=7,loc="upper right",ncol=4)
-pileup(fig.add_subplot(gs[1,0]),"data/rs/HG02717.novel_pileup.tsv",4236512,"b  HG02717 hap1 HLA-DQB1*02:new, Ala>Asp at CDS 266 (gene on - strand)\n    8/14 reads carry the assembly base, 6/14 the other haplotype")
-pileup(fig.add_subplot(gs[1,1]),"data/rs/NA20346.novel_pileup.tsv",4622149,"c  NA20346 hap2 HLA-DPA1*01:new, Ala>Met at CDS 124 (gene on - strand)\n    24/51 reads carry the assembly base, 27/51 the other haplotype")
+pileup(fig.add_subplot(gs[1,0]),"data/rs/HG02717.novel_pileup.tsv",4236512,"b  HG02717 hap1 HLA-DQB1, Ala>Asp at CDS 266 (gene on - strand): the allele is DQB1*02:180:02 (IPD-IMGT/HLA 3.56)\n    8/14 reads carry the assembly base, 6/14 the other haplotype")
+pileup(fig.add_subplot(gs[1,1]),"data/rs/NA20346.novel_pileup.tsv",4622149,"c  NA20346 hap2 HLA-DPA1, Ala>Met at CDS 124 (gene on - strand): novel in IPD-IMGT/HLA 3.65\n    24/51 reads carry the assembly base, 27/51 the other haplotype")
 fig.savefig("figures/fig4_novel_coding_alleles.png",dpi=160,bbox_inches="tight")
 print(tab.drop(columns="indel").to_string())

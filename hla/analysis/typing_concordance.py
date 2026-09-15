@@ -15,12 +15,14 @@ GENES = ["HLA-A", "HLA-B", "HLA-C", "HLA-DRB1", "HLA-DQA1", "HLA-DQB1"]
 ap = argparse.ArgumentParser()
 ap.add_argument("--calls", default="hla_calls.tsv"); ap.add_argument("--fufihla", required=True)
 ap.add_argument("--gene-fasta-dir", help="directory with <GENE>.fa of all annotated assembled gene copies (records sample#hap#GENE)")
-ap.add_argument("--t1k"); ap.add_argument("--published", help="1000G 20140702_hla_diversity.txt (Gourraud et al. 2014)"); ap.add_argument("--out-prefix", default="data/typing_concordance"); ap.add_argument("--fig", default="figures/fig12_typing_concordance.png")
+ap.add_argument("--t1k"); ap.add_argument("--published", help="1000G 20140702_hla_diversity.txt (Gourraud et al. 2014)")
+ap.add_argument("--hprc-truth", help="Lai et al. 2024 HPRC 4-field labels (ground_truth/HPRC_2024/*.xlsx)"); ap.add_argument("--out-prefix", default="data/typing_concordance"); ap.add_argument("--fig", default="figures/fig12_typing_concordance.png")
 a = ap.parse_args()
 
 def norm(x):
     if not isinstance(x, str) or "*" not in x: return None
-    x = x.strip().split()[0].replace(":new", "")
+    x = x.strip().split()[0].replace(":new", "").rstrip("#*")      # footnote markers in published tables
+    x = re.sub(r"(:00)+$", "", x)                                   # Immuannot pads novel calls, e.g. DRB1*04:92:00
     x = re.sub(r"[A-Z]$", "", x) if re.search(r":\d+[A-Z]$", x) else x   # expression suffix N/L/Q
     return x if x.startswith("HLA-") else "HLA-" + x
 def trunc(x, k): return None if x is None else x.split("*")[0] + "*" + ":".join(x.split("*")[1].split(":")[:k])
@@ -110,6 +112,35 @@ def consensus_support(sample, gene):
             unal = int(t[1]) - (int(t[3]) - int(t[2]))
             best[t[0]] = min(best.get(t[0], 10**9), nm + unal)
         return max(best.values()) if len(best) == 2 else None
+
+# HPRC 4-field truth (Lai et al. 2024, CSBJ): phased-assembly labels cross-checked with targeted capture sequencing
+truth = {}
+if a.hprc_truth:
+    X = pd.read_excel(a.hprc_truth, header=None)
+    hdr = X.iloc[1].tolist()
+    for i in range(2, len(X)):
+        smp = X.iloc[i, 1]
+        if not isinstance(smp, str): continue
+        for j, h in enumerate(hdr):
+            if isinstance(h, str) and h.startswith("HLA-") and h in GENES:
+                v = [X.iloc[i, j], X.iloc[i, j + 1]]
+                v = [norm(x) for x in v if isinstance(x, str)]
+                if len(v) == 1: v = v * 2
+                if len(v) == 2: truth[(smp, h)] = v
+    trow = []
+    for (smp, g), tv in truth.items():
+        r = {"sample": smp, "gene": g, "truth": "/".join(tv)}
+        for meth, src in (("immuannot", imm), ("fufihla", fufi), ("t1k", t1k)):
+            q = src.get((smp, g)) or src.get((smp.lower(), g))
+            if q is None: continue
+            r[meth] = "/".join(map(str, q))
+            for k in (1, 2, 3, 4): r[f"truth_{meth}_{k}f"] = pair_match(tv, q, k)
+        trow.append(r)
+    TR = pd.DataFrame(trow)
+    if len(TR):
+        TR.to_csv(a.out_prefix + "_vs_hprc_truth.tsv", sep="\t", index=False)
+        tc = [c for c in TR.columns if c.startswith("truth_")]
+        print("vs HPRC 4-field truth (Lai 2024):\n", TR.groupby("gene")[tc].mean().round(3).to_string())
 
 rows = []
 for (s, g), p in imm.items():

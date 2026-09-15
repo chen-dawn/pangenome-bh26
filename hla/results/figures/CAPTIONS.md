@@ -21,6 +21,10 @@ alleles of known segments rather than errors. Rows in red differ from the closes
 homopolymer artefacts). (b, c) Base-level pileups of the individual's own 1000G Illumina reads realigned to the
 assembled contig around the novel codon: HG02717 DQB1 Ala>Asp (8/14 reads carry the assembly base, the rest the other
 haplotype) and NA20346 DPA1 Ala>Met (24/51). APR/JaSaPaGe reads are not public, so those rows are assembly-only.
+Correction: "novel" here means absent from IPD-IMGT/HLA 3.55 (Immuannot's database). Checked against 3.65, the HG02717
+coding sequence (exons 2-6) is DQB1*02:180:02, named in release 3.56 (February 2024; the HPRC truth set of Lai et al. 2024
+also calls DQB1*02:180), so it is not novel. NA20346 DPA1 remains novel in 3.65 (closest allele DPA1*03:02:02, one
+substitution in exon 2).
 
 **fig5_population_hla.png - HLA allele landscape by cohort.**
 Top: two-field allele frequencies (top 6 per cohort) for HLA-A, -B, -DRB1; e.g. A*24:02 35% and DRB1*09:01 25% in
