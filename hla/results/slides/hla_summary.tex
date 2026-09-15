@@ -9,7 +9,7 @@
 \graphicspath{{./}{../figures/}}
 \newcommand{\src}[1]{\vfill{\tiny\textcolor{gray}{#1}}}
 
-\title{HLA regions from 610 assembled haplotypes: extraction, typing and pangenome views}
+\title{HLA regions from 754 haplotypes of five pangenome projects: extraction, typing and pangenome views}
 \author{Robert Hoehndorf (KAUST)}
 \institute{BioHackathon Japan 2026, HLA/pangenome group}
 \date{15 September 2026}
@@ -22,51 +22,77 @@
 
 \begin{frame}{One CWL workflow: pgr-tk extraction, Immuannot typing, pgr-tk and pggb graphs}
   \begin{itemize}
-    \item 610 haplotypes: APR (UAE Arab) 106, HPRC release 2 464, JaSaPaGe Saudi 18 and Japanese 20, GRCh38, CHM13
-    \item MHC (GRCh38 chr6:28.5--33.5 Mb, 100 kb flank) pulled from each assembly with pgr-tk \texttt{pgr-query}, about 30 s per genome
+    \item 754 haplotypes: 610 assembled (APR, HPRC release 2, JaSaPaGe) and 144 read from pangenome graphs (K-PanRef, CPC), plus GRCh38 and CHM13
+    \item MHC (GRCh38 chr6:28.5--33.5 Mb, 100 kb flank) pulled from each haplotype with pgr-tk \texttt{pgr-query}, about 30 s per genome
     \item Immuannot (IPD-IMGT/HLA 3.55) gives gene structure and full-resolution allele calls per haplotype
     \item Per gene (19 genes): sequences cut at the Immuannot coordinates, pgr-tk principal-bundle plots, pggb graphs rendered with odgi
     \item Whole MHC and the class II block (DRA to DMA): pgr-tk bundle decomposition, dendrograms, bundle graphs
-    \item Runs on the NIG node without containers (Toil, \texttt{--no-container}); repo \texttt{github.com/leechuck/pangenome-bh26}
+    \item Second typing method (FuFiHLA) on every individual; T1K on 1000 Genomes Illumina reads
+    \item Runs on the NIG supercomputer without containers (Toil, \texttt{--no-container}); repo \texttt{github.com/leechuck/pangenome-bh26}
   \end{itemize}
 \end{frame}
 
-\begin{frame}{The MHC comes out intact from 608 of 610 haplotypes}
-  \centering
-  \includegraphics[height=0.62\textheight]{mhc_extraction_coverage.png}
+\begin{frame}{Nine cohorts from five projects; HPRC is split by population and two cohorts exist only as graphs}
   \begin{itemize}
-    \item y: fraction of the GRCh38 MHC covered by the extracted segments; median 1.000 in every cohort, 599 haplotypes on a single contig
-    \item Five 1000G JPT individuals were assembled by both HPRC and JaSaPaGe: 59 of 61 full-resolution gene calls agree, the two exceptions differ only in an intron
+    \item Assemblies
+    \begin{itemize}
+      \item APR, UAE Arab Pangenome Reference: 106 haplotypes
+      \item JaSaPaGe: Saudi (ksa*) 18, Japanese (1000G JPT) 20
+      \item HPRC release 2, split with the 1000G population labels and the HPRC sample table: Japanese (JPT) 32, Ashkenazi Jewish 2 (HG002 is the only Jewish individual), other East Asian (CHB, CHS, CDX, KHV, HG005) 70, rest 360
+    \end{itemize}
+    \item Pangenome graphs without released assembly files
+    \begin{itemize}
+      \item K-PanRef, Korean pangenome (Minigraph-Cactus): 14 individuals, 28 haplotypes
+      \item CPC Phase 1, Chinese Pangenome Consortium (Minigraph-Cactus): 58 individuals, 116 haplotypes; its 3 HPRC samples are not added twice
+    \end{itemize}
+    \item Five JPT individuals were assembled by both HPRC and JaSaPaGe and are kept as separate haplotypes
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{How: population labels and MHC haplotypes from the Korean and Chinese graphs}
+  \begin{itemize}
+    \item HPRC split: population code per sample from the 1000G high-coverage sequence indexes (\texttt{POPULATION} column), HPRC release 2 sample metadata for non-1000G samples (HG002 Ashkenazi, HG005 Han Chinese); table \texttt{data/hprc\_r2\_populations.tsv}, used by \texttt{make\_inputs.py --populations}
+    \item K-PanRef (\texttt{KPanRef.gbz}): all haplotype paths of a sample with \texttt{vg paths -F}; only KOREF1 has chromosome-named contigs, so path segments are kept when a minimap2 asm20 alignment to the GRCh38 MHC has $\ge$ 50 kb matching bases and MAPQ $\ge$ 20 (\texttt{nig/kpanref\_mhc.sbatch})
+    \item CPC: the odgi file holds only reference paths, so haplotype walks (W lines) are read from the GFA; reference MHC nodes from \texttt{odgi extract} of CHM13v2 chr6:28--34 Mb, each walk kept from its first to last MHC node, segment sequences from a second GFA pass, same alignment filter (\texttt{nig/cpc\_mhc.sbatch})
+    \item Both then enter the same extraction and Immuannot steps as the assemblies (\texttt{nig/add\_graph\_cohorts.sbatch})
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{The MHC comes out complete from 747 of 752 haplotypes, including the graph-derived ones}
+  \centering
+  \includegraphics[width=0.95\textwidth]{fig2_mhc_extraction.png}
+  \begin{itemize}
+    \item Left: fraction of the GRCh38 MHC covered per haplotype (numbers: haplotypes with $\ge$ 0.99). Right: MHC segments per haplotype; 720 of 752 on one segment
+    \item Below 0.99: 4 CPC Chinese haplotypes (lowest 0.92) and 1 JaSaPaGe Saudi (0.96)
   \end{itemize}
 \end{frame}
 
 \begin{frame}{How: MHC extraction with pgr-tk (workflow steps prepare\_reference, extract\_pgrtk)}
   \begin{itemize}
     \item Query: GRCh38 chr6:28,510,120--33,480,577 plus 100 kb flank, cut from the PanSN GRCh38 fasta with samtools faidx
-    \item Per assembly: \texttt{pgr-query --fastx-file -w 80 -k 56 -r 4 --min-span 64 --merge-range-tol 100000} (SHIMMER index of the whole assembly in memory, 8 threads, about 30 s and 9 GB per 3 Gb haplotype)
+    \item Per haplotype: \texttt{pgr-query --fastx-file -w 80 -k 56 -r 4 --min-span 64 --merge-range-tol 100000} (SHIMMER index of the input in memory, 8 threads, about 30 s and 9 GB per 3 Gb haplotype)
     \item Hits under 20 kb or under 20 anchors dropped; minus-strand hits reverse-complemented; records renamed \texttt{sample\#hap\#contig:start-end}; coverage = query span covered by kept hits (\texttt{scripts/pgr\_query\_rename.py})
-    \item Assemblies already PanSN-named (HPRC r2, references, JaSaPaGe NA*) are not prefixed twice; samples present in two projects get a \texttt{.cohort} suffix
-    \item Concordance check: full-resolution Immuannot calls of the five JPT individuals compared between their HPRC and JaSaPaGe assemblies, per gene, as unordered genotypes
+    \item Samples present in two projects get a \texttt{.cohort} suffix; figure: \texttt{analysis/fig2\_extraction.py}
+    \item The five JPT individuals assembled twice: 59 of 61 full-resolution gene calls agree between their HPRC and JaSaPaGe assemblies; the two exceptions differ only in an intron
   \end{itemize}
 \end{frame}
 
-
 \begin{frame}{Allele frequencies separate the cohorts; DRB1 full-length sequences are mostly new}
   \centering
-  \includegraphics[height=0.78\textheight]{fig5_population_hla.png}
-  \src{Immuannot consensus calls, two-field alleles; novel = full-length sequence absent from IPD-IMGT/HLA 3.55}
+  \includegraphics[height=0.66\textheight]{fig5_population_hla.png}
+  \begin{itemize}\small
+    \item A*24:02 in 35--41\% of Japanese haplotypes, A*11:01 in 29\% of CPC Chinese, B*51:01 in 28\% of Saudi, DRB1*03:01 in 18\% of APR; DRB1 copies without a full-length database match: 57--79\% per cohort (Jewish column: HG002 alone)
+  \end{itemize}
 \end{frame}
 
 \begin{frame}{How: allele calling and aggregation (steps immuannot, aggregate)}
   \begin{itemize}
-    \item Immuannot v3 (\texttt{immuannot.sh -c <mhc.fa> -r Data-2024Feb02 --diff 0.03}, 4 threads) on each extracted MHC: IPD-IMGT/HLA 3.55 gen sequences, IPD-KIR 2.13, RefSeq C4; 610 runs, about 2 h on 28 cores
+    \item Immuannot v3 (\texttt{immuannot.sh -c <mhc.fa> -r Data-2024Feb02 --diff 0.03}, 4 threads) on each extracted MHC: IPD-IMGT/HLA 3.55 genomic sequences, IPD-KIR 2.13, RefSeq C4; 754 runs
     \item Allele = Immuannot \texttt{consensus} field of the transcript row; \texttt{:new} marks a full-length sequence absent from the database; novel coding vs noncoding from \texttt{cds\_distance}
     \item \texttt{scripts/aggregate\_immuannot.py}: hla\_calls.tsv (one row per gene copy), haplotype x gene matrix, copy numbers (C4A/B long/short, DRB3/4/5 presence), per-cohort two-field frequencies and plots
-    \item Cohorts: assembly folder plus file-name rule; JaSaPaGe split into Saudi (ksa*) and Japanese (NA*, 1000G JPT) in \texttt{scripts/make\_inputs.py}
-    \item Figure: \texttt{analysis/fig5\_population.py}
+    \item Heat maps: top 6 two-field alleles per cohort, frequency = fraction of haplotypes; figure: \texttt{analysis/fig5\_population.py}, cohort order and colors in \texttt{analysis/cohorts.py}
   \end{itemize}
 \end{frame}
-
 
 \begin{frame}{Two HPRC individuals are truly MHC-homozygous; one JaSaPaGe assembly carries the same haplotype twice}
   \centering
@@ -80,109 +106,140 @@
   \begin{itemize}
     \item Candidates: individuals whose two haplotypes carry identical alleles at all eight classical genes (NA18976, NA19909, JaSaPaGe NA18952; HG00544 at seven)
     \item Panel a: 1000G high-coverage phased VCF (chr6, 3,202 samples), heterozygous SNPs per 100 kb for the candidates and controls (bcftools view -r chr6:28.51-33.48M)
-    \item Panel b: MHC-region reads (chr6:28.4--33.6 Mb) pulled from the public 1000G CRAMs (samtools view on the EBI URL with the GRCh38 chr6 reference), realigned to the individual's own assembled haplotype 1 with minimap2 -ax sr; samtools mpileup, sites with 25--75\% alternative base at depth $\ge$ 15, counted per 50 kb
+    \item Panel b: MHC-region reads (chr6:28.4--33.6 Mb) from the public 1000G CRAMs, realigned to the individual's own assembled haplotype 1 with minimap2 -ax sr; samtools mpileup, sites with 25--75\% alternative base at depth $\ge$ 15, counted per 50 kb
     \item Panel c: minimap2 -cx asm20 --cs of haplotype 2 against haplotype 1 of the same individual; substitutions per 50 kb from the cs tag
     \item JaSaPaGe NA18952 hap2 file carries the HPRC contig name JBHIJT010000011.1; hap1 (hifiasm contig) has the same alleles: the assembly holds one haplotype twice
   \end{itemize}
 \end{frame}
 
-
-\begin{frame}{Substitution-type novel coding alleles hold up in the individual's own reads; indel-only ones do not}
+\begin{frame}{Of two read-supported novel coding alleles, only NA20346 DPA1 is still novel in IPD-IMGT/HLA 3.65}
   \centering
   \includegraphics[width=0.92\textwidth]{fig4_table.png}\\[2pt]
-  \includegraphics[height=0.3\textheight]{fig4_pileups.png}
-  \src{Pileups: the individual's 1000G Illumina reads realigned to its assembled contig; mixed columns = heterozygous sites. APR and JaSaPaGe reads are not public}
+  \includegraphics[height=0.27\textheight]{fig4_pileups.png}
+  \src{Novel = absent from IPD-IMGT/HLA 3.55 (Immuannot). HG02717 DQB1 equals DQB1*02:180:02 in exons 2--6, created in release 3.56 (Feb 2024). Pileups: the individual's 1000G Illumina reads realigned to its assembled contig. APR and JaSaPaGe reads are not public}
 \end{frame}
 
 \begin{frame}{How: novel-allele support (scripts/novel\_alleles.py, analysis/fig4)}
   \begin{itemize}
-    \item Immuannot \texttt{cds\_mut} gives, per transcript, the closest allele and the CDS-relative differences (cs-style: N matching bases then a substitution, assembly base first); converted to contig coordinates through the CDS rows, strand-aware
-    \item Independent-assembly support: the 31-mer centred on each variant (and its reverse complement) searched in the same gene cut from all other 609 haplotypes; count of carriers, and whether the other haplotype of the same individual carries it
-    \item Read support (HPRC individuals only): 1000G Illumina reads of the same person realigned to the assembled contig (minimap2 -ax sr), samtools mpileup $\pm$40 bp around the novel codon, per-base counts
-    \item Indel-only ``new'' alleles (ksa004 HLA-A, HG03516 DPA1) flagged as likely HiFi homopolymer errors; APR raw reads are not public (SharePoint holds only DeepVariant VCFs)
+    \item Immuannot \texttt{cds\_mut} gives the closest allele and the CDS-relative differences (assembly base first); converted to contig coordinates through the CDS rows, strand-aware
+    \item Independent-assembly support (610-haplotype run): the 31-mer centred on each variant searched in the same gene cut from all other haplotypes; carriers counted, including the other haplotype of the same individual
+    \item Read support (HPRC individuals only): 1000G Illumina reads of the same person realigned to the assembled contig (minimap2 -ax sr), samtools mpileup $\pm$40 bp around the codon
+    \item Newer database check: coding sequence of each assembled gene aligned with minimap2 -x splice:hq to all coding alleles of IPD-IMGT/HLA 3.65 (T1K index); HG02717: exact over exons 2--6 to DQB1*02:180:02; NA20346: closest DPA1*03:02:02, 1 substitution
+    \item Indel-only ``new'' alleles (ksa004 HLA-A, HG03516 DPA1) flagged as likely HiFi homopolymer errors
   \end{itemize}
 \end{frame}
 
+\begin{frame}{Assembly-based typing agrees with published and truth-set genotypes at 2-field resolution}
+  \centering
+  \includegraphics[width=0.9\textwidth]{fig12_typing_concordance.png}
+  \begin{itemize}\small
+    \item Left: FuFiHLA vs Immuannot on the same assemblies, 373--376 individuals; 2-field 92\% (DRB1) to 100\%. Most DRB1 disagreements: both call a novel allele (19) or FuFiHLA invents a second allele on a homozygous gene (10)
+    \item Against truth sets: HPRC 4-field labels (Lai et al. 2024, 44 individuals) 2-field Immuannot $\ge$ 98\%, FuFiHLA 100\%; T1K vs Sanger typing of 412 1000G samples (Gourraud et al. 2014) $\ge$ 98.8\%. Middle and right panels: only 23 assembled individuals typed by T1K so far
+  \end{itemize}
+\end{frame}
 
-\begin{frame}{425 distinct gene-level class II haplotypes among 608; secondary DRB gene structures the flow}
+\begin{frame}{How: three typing methods and two truth sets (analysis/typing\_concordance.py)}
+  \begin{itemize}
+    \item FuFiHLA 0.2.4 (Bioinformatics 2026, btag231; long-read typing of A, B, C, DRB1, DQA1, DQB1; IPD-IMGT/HLA 3.65): no public long reads for most cohorts, so both assembled MHC haplotypes of an individual are tiled into error-free 15 kb pseudo-reads every 1.5 kb and typed together (\texttt{nig/fufihla\_assemblies.sbatch}); checked on HG002, 12 of 12 alleles
+    \item FuFiHLA artefact test: each reconstructed allele aligned to the individual's assembled gene copies; a consensus absent from the assembly is flagged
+    \item T1K (Genome Research 2023) on all reads aligned to the MHC, chr6 alternative haplotypes and HLA contigs, extracted from the 2,504 1000G high-coverage CRAMs on the NIG shared data area; alleles with quality 0 ignored (\texttt{nig/kg\_mhc\_reads.sbatch})
+    \item Comparison: unordered allele pairs truncated to 1--4 fields; published ambiguity lists count as a match if any member matches; truth sets in \texttt{1000g\_ground\_truth/} (repository)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{518 distinct gene-level class II haplotypes among 752; secondary DRB gene structures the flow}
   \centering
   \includegraphics[height=0.78\textheight]{fig6_classII_haplotype_flow.png}
-  \src{Two-field alleles per haplotype; ribbons coloured by DRB3 / DRB4 / DRB5 / none. After Chin, ASHI 2023 (94 haplotypes)}
+  \src{Two-field alleles per haplotype; ribbons colored by DRB3 / DRB4 / DRB5 / none. After Chin, ASHI 2023 (94 haplotypes)}
 \end{frame}
 
 \begin{frame}{How: class II gene-level haplotype strings and flow plots (analysis/classII\_flow\_pca.py)}
   \begin{itemize}
-    \item Per haplotype: two-field Immuannot allele of DRA, DRB3/4/5 (collapsed into one column, ``none'' if absent), DRB1, DQA1, DQB1, DQA2, DQB2, DOB, TAP2, TAP1, DMB, DMA, joined into one string (\texttt{results/tables/classII\_haplotype\_strings.tsv})
-    \item Alluvial plot: columns are genes, node height = haplotypes carrying the allele, ribbons = haplotypes shared between adjacent alleles, coloured by secondary DRB gene; drawn with matplotlib paths
+    \item Per haplotype: two-field Immuannot allele of DRA, DRB3/4/5 (collapsed into one column, ``none'' if absent), DRB1, DQA1, DQB1, DQA2, DQB2, DOB, TAP2, TAP1, DMB, DMA, joined into one string (\texttt{tables/classII\_haplotype\_strings.tsv})
+    \item Alluvial plot: columns are genes, node height = haplotypes carrying the allele, ribbons = haplotypes shared between adjacent alleles, colored by secondary DRB gene
     \item Per-cohort version uses the same code on the DRB3/4/5--DRB1--DQA1--DQB1 columns of each cohort
-    \item Diplotype PCA (fig 8): one-hot encoding of the six DR/DQ alleles, centred, SVD; both haplotypes of an individual joined by a line
+    \item Diplotype PCA: one-hot encoding of the six DR/DQ alleles, centered, SVD; both haplotypes of an individual joined by a line
   \end{itemize}
 \end{frame}
-
 
 \begin{frame}{The DR-DQ block differs by population}
   \centering
-  \includegraphics[width=\textwidth]{fig7_classII_flow_by_cohort.png}
-  \begin{itemize}
-    \item Saudi: DRB4 haplotypes (DR7, DR4) 44\%; Japanese: DRB1*09:01--DQB1*03:03 and DRB1*15:02--DQB1*06:01; APR: DRB1*03:01--DQB1*02:01 18\%
+  \includegraphics[height=0.68\textheight]{fig7_classII_flow_by_cohort.png}
+  \begin{itemize}\small
+    \item DRB4 haplotypes (DR4, DR7, DR9): 44--45\% of Saudi and JaSaPaGe Japanese, 39\% of Korean; DRB3: 46\% of CPC Chinese; DRB1*12:02 16\% in CPC Chinese
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Sequence-level structure of the class II region follows the DR haplogroups}
+\begin{frame}{Sequence-level structure of the class II region follows the DR haplogroups, not the cohort}
   \centering
-  \includegraphics[height=0.78\textheight]{fig11_classII_bundle_pca.png}
-  \src{PCA on presence of 863 pgr-tk principal bundles (DRA to DMA); each point one haplotype, grey lines join the two haplotypes of an individual}
+  \includegraphics[height=0.72\textheight]{fig11_classII_bundle_pca.png}
+  \src{PCA on presence of 890 pgr-tk principal bundles (DRA to DMA) in 751 haplotypes; PC1 27\%, PC2 16\%; left: secondary DRB gene, right: cohort; grey lines join the two haplotypes of an individual}
 \end{frame}
 
-\begin{frame}{How: class II bundle decomposition with pgr-tk (scripts/extract\_span.py, tools/pgr\_pbundle.cwl, analysis/classII\_bundles.py); also slides 10 and 11}
+\begin{frame}{How: class II bundle decomposition with pgr-tk (scripts/extract\_span.py, tools/pgr\_pbundle.cwl, analysis/classII\_bundles.py)}
   \begin{itemize}
-    \item Span: from HLA-DRA to HLA-DMA (outermost Immuannot coordinates, 20 kb flank) cut from every MHC haplotype in DRA orientation with samtools faidx; 610 sequences, 461--650 kb
-    \item \texttt{pgr-pbundle-decomp -w 48 -k 56 -r 2 --min-span 8 --min-branch-size 8 --bundle-length-cutoff 500 --bundle-merge-distance 2000}: 863 principal bundles; \texttt{pgr-pbundle-bed2dist} for the distance matrix and dendrogram, \texttt{bed2sorted} for the bundle-presence vectors, \texttt{bed2svg} for the bundle plot (classII.svg/html)
-    \item PCA (this slide): 608 x 863 bundle presence matrix, centred, SVD; colour = secondary DRB gene from Immuannot
-    \item Dendrogram (slide 10): Newick from bed2dist, leaves mapped to haplotypes, colour strips from the allele calls; cluster purity at 10--80 clusters in \texttt{classII\_cluster\_purity.tsv}
-    \item Bundle graph (slide 11): nodes = bundles from the bed file, edges = consecutive bundles along each haplotype weighted by haplotype count, Kamada-Kawai layout
+    \item Span: from HLA-DRA to HLA-DMA (outermost Immuannot coordinates, 20 kb flank) cut from every MHC haplotype in DRA orientation with samtools faidx; 753 sequences
+    \item \texttt{pgr-pbundle-decomp -w 48 -k 56 -r 2 --min-span 8 --bundle-length-cutoff 500 --bundle-merge-distance 2000}: 890 principal bundles; \texttt{pgr-pbundle-bed2dist} for distances and dendrogram, \texttt{bed2sorted} for bundle-presence vectors, \texttt{bed2svg} for the bundle plot
+    \item PCA: haplotype x bundle presence matrix, centered, SVD; colors from Immuannot (secondary DRB gene) and cohort labels
+    \item Dendrogram: Newick from bed2dist, leaves mapped to haplotypes, color strips from the allele calls and cohorts; cluster purity at 10--80 clusters in \texttt{classII\_cluster\_purity.tsv}
+    \item Bundle graph: nodes = bundles from the bed file, edges = consecutive bundles along each haplotype weighted by haplotype count, Kamada-Kawai layout
   \end{itemize}
 \end{frame}
 
-
-\begin{frame}{Bundle-distance clusters are near-pure DRB1 allele groups}
+\begin{frame}{Bundle-distance clusters follow DRB1 allele groups}
   \centering
   \includegraphics[height=0.78\textheight]{fig9_dendrogram_top.png}
-  \src{Top of the pgr-tk bundle-distance dendrogram of 610 class II haplotypes; strips: DRB1 group, secondary DRB gene. Full tree: fig9\_classII\_dendrogram.png}
+  \src{Top of the pgr-tk bundle-distance dendrogram of 753 class II haplotypes; strips: DRB1 group, secondary DRB gene, cohort. Within-cluster share of the most common 2-field DRB1 allele: 39\% at 10 clusters, 52\% at 80. Full tree: fig9\_classII\_dendrogram.png}
 \end{frame}
 
 \begin{frame}{The class II bundle graph is linear except for the DRB block}
   \centering
   \includegraphics[height=0.78\textheight]{fig10_classII_bundle_graph.png}
-  \src{863 principal bundles, node size = bundle length, colour = haplotypes carrying it, edges = consecutive bundles on a haplotype}
+  \src{890 principal bundles, node size = bundle length, color = haplotypes carrying it, edges = consecutive bundles on a haplotype}
 \end{frame}
 
-\begin{frame}{Per-gene pangenome graphs for 19 HLA genes, all 610 haplotypes}
+\begin{frame}{Per-gene pangenome graphs for 19 HLA genes, all 754 haplotypes}
   \centering
   \includegraphics[height=0.64\textheight]{drb1_odgi_viz_top.png}
   \begin{itemize}
-    \item HLA-DRB1 pggb graph (odgi viz, top rows of 610): rows are haplotypes, x is the graph, colour = path coverage
+    \item HLA-DRB1 pggb graph (odgi viz, top rows): rows are haplotypes, x is the graph, color = path coverage
     \item Also per gene: pgr-tk bundle plot (SVG/HTML), dendrogram, MAP-graph GFA; whole-MHC bundle plot
   \end{itemize}
 \end{frame}
 
 \begin{frame}{How: per-gene sequence sets and graphs (steps gene\_extract, gene\_bundle, gene\_graph, gene\_viz, gene\_draw)}
   \begin{itemize}
-    \item Gene sequences: every annotated copy cut at its Immuannot coordinates with 2 kb flank, gene orientation, named \texttt{sample\#hap\#GENE} (\texttt{scripts/extract\_genes.py}); a pgr-query homology fetch is available as alternative but needs denser seeds (w=24/k=32; DRB1 w=16/k=24) than the defaults
+    \item Gene sequences: every annotated copy cut at its Immuannot coordinates with 2 kb flank, gene orientation, named \texttt{sample\#hap\#GENE} (\texttt{scripts/extract\_genes.py})
     \item pgr-tk per gene: \texttt{pgr-pbundle-decomp -w 48 -k 56 -r 2 --bundle-length-cutoff 200 --bundle-merge-distance 1000}, then bed2dist / bed2sorted / bed2svg
     \item pggb 0.7.4 per gene: \texttt{-p 90 -s 2000 -n <sequences> -P asm20}; odgi viz (1D, rows = haplotypes) and odgi layout + draw (2D)
-    \item Whole MHC: pgr-pbundle-decomp w=80, k=56, r=6, min\_span 28 on the 3 Gb MHC fasta (about 40 min); optional whole-MHC pggb graph not run
-    \item Runtime: Toil single-machine on 28 cores; extraction, annotation and graphs about 4 h in total
+    \item Whole MHC: pgr-pbundle-decomp w=80, k=56, r=6, min\_span 28 on the MHC fasta of all haplotypes
+    \item Runtime of the 754-haplotype aggregation, gene cuts, bundles and graphs: 4.3 h on 16 cores (Toil single machine)
   \end{itemize}
 \end{frame}
 
+\begin{frame}{Shared resources for the next steps: 1000G MHC reads and a whole-MHC pangenome graph}
+  \begin{itemize}
+    \item \texttt{/home/asianhla/data/upload/1000G\_MHC/}: for each of the 2,504 1000G high-coverage samples, all reads aligned to the MHC, the chr6 alternative haplotypes and the 525 HLA allele contigs (CRAM, about 70 MB per sample), with T1K genotypes; 675 samples done, the rest queued
+    \item \texttt{\textasciitilde leechuck/hla/mhcgraph/out/}: Minigraph-Cactus graph of all 754 MHC haplotypes (GRCh38 reference, CHM13 second reference) with vg giraffe indexes, for aligning the 1000G reads; build running
+    \item \texttt{/home/asianhla/data/upload/HLA/}: results, MHC fastas, Immuannot GTFs, class II, FuFiHLA calls, figures, tables, workflow copy, README
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{How: 1000G read extraction and graph construction (nig/kg\_mhc\_reads.sbatch, nig/mhc\_mc\_graph.sbatch)}
+  \begin{itemize}
+    \item Reads: \texttt{samtools view -C -T GRCh38\_full\_analysis\_set\_plus\_decoy\_hla.fa} on each CRAM for chr6:28,510,120--33,480,577, all \texttt{chr6\_*\_alt} contigs and all \texttt{HLA-*} contigs; primary pairs to fastq; \texttt{run-t1k --preset hla} with an IPD-IMGT/HLA index built by \texttt{t1k-build.pl}
+    \item Graph: Cactus 3.3.0 \texttt{cactus-pangenome} on the 754 MHC fastas (contigs renamed \texttt{ctg<N>}, mapping in \texttt{contig\_names.tsv}), \texttt{--reference GRCh38 CHM13 --gbz clip full --giraffe clip --vcf}; 32 cores, 240 GB
+    \item The graph covers only the MHC: reads from paralogous sequence elsewhere in the genome can be forced onto it
+  \end{itemize}
+\end{frame}
 
 \begin{frame}{Take-home}
   \begin{itemize}
-    \item Assembly-based HLA typing across three pangenome projects reproduces known population frequencies and reveals data problems (duplicated haplotype, homozygous individuals) that short reads alone would not
-    \item 60--78\% of DRB1 gene copies have no full-length match in IPD-IMGT/HLA; Arab haplotypes (APR + Saudi, 124) are a submission-ready resource once read support is added
-    \item pgr-tk bundle decomposition recovers DR haplogroup structure without any allele calls; scales from 94 to 610 haplotypes
-    \item Open: APR and JaSaPaGe raw reads for novel-allele validation; KIR and IGH with the same workflow; HPRC per-population split
+    \item Assembly-based HLA typing across five pangenome projects reproduces known population frequencies and reveals data problems (duplicated haplotype, homozygous individuals) that short reads alone would not
+    \item Pangenome graphs without released assemblies (K-PanRef, CPC) still yield complete MHC haplotypes and allele calls
+    \item 57--79\% of DRB1 gene copies have no full-length match in IPD-IMGT/HLA 3.55; ``novel'' calls must be rechecked against the newest release (HG02717 DQB1 was named in 3.56)
+    \item Two assembly-based typing methods agree with truth sets at 2-field resolution; FuFiHLA on assembly pseudo-reads needs a homozygosity check
+    \item Open: aligning the 1000G MHC reads to the whole-MHC graph; APR and JaSaPaGe raw reads for novel-allele validation; KIR and IGH with the same workflow
     \item Workflow, scripts, figures and tables: \texttt{github.com/leechuck/pangenome-bh26} (\texttt{hla/})
   \end{itemize}
 \end{frame}

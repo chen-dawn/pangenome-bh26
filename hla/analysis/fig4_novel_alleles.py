@@ -16,8 +16,8 @@ reads={("HG02717","HLA-DQB1"):(8,14),("NA20346","HLA-DPA1"):(24,51)}
 # checked against IPD-IMGT/HLA 3.65 (Immuannot uses 3.55): HG02717's coding sequence (exons 2-6) equals DQB1*02:180:02,
 # created in release 3.56 (Feb 2024), and the HPRC truth set (Lai et al. 2024) calls DQB1*02:180; NA20346's DPA1 has no
 # exact coding match in 3.65 (closest DPA1*03:02:02, 1 substitution in exon 2)
-named_later={("HG02717","HLA-DQB1"):"Ala>Asp vs 02:02:01; = DQB1*02:180:02 (named in IPD-IMGT/HLA 3.56), not novel",
-             ("NA20346","HLA-DPA1"):"Ala>Met vs 01:03:01; still novel in 3.65 (closest 03:02:02, 1 subst.)"}
+named_later={("HG02717","HLA-DQB1"):"Ala>Asp; = DQB1*02:180:02 (IMGT/HLA 3.56): not novel",
+             ("NA20346","HLA-DPA1"):"Ala>Met; novel in 3.65 (closest 03:02:02, 1 subst.)"}
 rows=[]
 for s,h,g,c in alleles:
     x=sup[(sup["sample"]==s)&(sup.gene==g)]
@@ -42,7 +42,7 @@ for (i,j),c in t.get_celld().items():
     if i==0: c.set_text_props(weight="bold"); c.set_facecolor("#e8e8e8")
     elif tab.indel.iloc[i-1]: c.set_facecolor("#fde0dd")
     elif tab.reads.iloc[i-1][0].isdigit(): c.set_facecolor("#e0f3db")
-ax.set_title("a  Candidate novel coding alleles (Immuannot ':new' with CDS differences) in classical HLA genes.  private = variant 31-mer absent from all other 609 haplotypes;\n    red = differences include indels (typical HiFi homopolymer assembly errors, treat as artefacts); green = heterozygous support in the individual's own short reads",loc="left",fontsize=9.5)
+ax.set_title("a  Candidate novel coding alleles (Immuannot ':new' with CDS differences) in classical HLA genes.  private = variant 31-mer absent from the other 609 haplotypes of the 610-haplotype run;\n    red = differences include indels (typical HiFi homopolymer assembly errors, treat as artefacts); green = heterozygous support in the individual's own short reads",loc="left",fontsize=9.5)
 def pileup(ax,fn,pos,title):
     p=pd.read_csv(fn,sep="\t",header=None,names=["pos","ref","depth","refn","A","C","G","T"])
     p=p[(p.pos>=pos-40)&(p.pos<=pos+40)].reset_index(drop=True)
@@ -58,7 +58,7 @@ def pileup(ax,fn,pos,title):
         a,n=max(alt.items(),key=lambda kv:kv[1])
         if n>=3 and n/c.depth>=0.2: ax.text(j,bottom[j]+1,f"{c.ref}/{a}",fontsize=6,ha="center",rotation=90)
     ax.legend(handles=[plt.Rectangle((0,0),1,1,color=cols[b]) for b in "ACGT"],labels=list("ACGT"),fontsize=7,loc="upper right",ncol=4)
-pileup(fig.add_subplot(gs[1,0]),"data/rs/HG02717.novel_pileup.tsv",4236512,"b  HG02717 hap1 HLA-DQB1, Ala>Asp at CDS 266 (gene on - strand): the allele is DQB1*02:180:02 (IPD-IMGT/HLA 3.56)\n    8/14 reads carry the assembly base, 6/14 the other haplotype")
-pileup(fig.add_subplot(gs[1,1]),"data/rs/NA20346.novel_pileup.tsv",4622149,"c  NA20346 hap2 HLA-DPA1, Ala>Met at CDS 124 (gene on - strand): novel in IPD-IMGT/HLA 3.65\n    24/51 reads carry the assembly base, 27/51 the other haplotype")
+pileup(fig.add_subplot(gs[1,0]),"data/rs/HG02717.novel_pileup.tsv",4236512,"b  HG02717 hap1 DQB1 (= DQB1*02:180:02), Ala>Asp at CDS 266\n    8/14 reads carry the assembly base, 6/14 the other haplotype")
+pileup(fig.add_subplot(gs[1,1]),"data/rs/NA20346.novel_pileup.tsv",4622149,"c  NA20346 hap2 DPA1 (novel in IMGT/HLA 3.65), Ala>Met at CDS 124\n    24/51 reads carry the assembly base, 27/51 the other haplotype")
 fig.savefig("figures/fig4_novel_coding_alleles.png",dpi=160,bbox_inches="tight")
 print(tab.drop(columns="indel").to_string())

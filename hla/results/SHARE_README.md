@@ -1,18 +1,18 @@
 # HLA pangenome analysis, BioHackathon Japan 2026 (shared folder `/home/asianhla/data/upload/HLA/`)
 
-Generated 14-15 September 2026 by Robert Hoehndorf (KAUST) with Claude Code on the NIG supercomputer
+Generated 14-15 September 2026 (754-haplotype update 15 September, 18:30 JST) by Robert Hoehndorf (KAUST) with Claude Code on the NIG supercomputer
 (partition `asianhla-c32`, node asianhla-vm, 28 cores / 200 GB). Everything here was produced by the CWL
 workflow and scripts in `workflow/` (git: https://github.com/leechuck/pangenome-bh26, directory `hla/`).
 Questions: robert.hoehndorf@kaust.edu.sa
 
 ## Inputs
 
-610 haplotype assemblies (`inputs-610-haplotypes.yml` lists every file with sample, haplotype and cohort):
+754 haplotypes (`inputs-754-haplotypes.yml` lists every input with sample, haplotype and cohort; the earlier 610-haplotype run is kept in `results-610/` with `inputs-610-haplotypes.yml`):
 
 | cohort | haplotypes | source on this cluster |
 |---|---|---|
 | APR (UAE Arab Pangenome Reference) | 106 | `/home/asianhla/data/upload/APR/assemblies` |
-| HPRC_r2 | 464 | `/home/asianhla/data/HPRC_r2/fasta` |
+| HPRC r2 (split by population, see below) | 464 | `/home/asianhla/data/HPRC_r2/fasta` |
 | JaSaPaGe-Saudi (ksa001-009) | 18 | `/home/asianhla/data/JaSaPaGe/assembly_clean/fasta` |
 | JaSaPaGe-Japanese (1000G JPT NA*) | 20 | same folder |
 | KPanRef-Korean (K-PanRef, 14 individuals) | 28 | graph only: `/home/asianhla/data/upload/KPanRef/KPanRef.gbz` |
@@ -45,10 +45,10 @@ haplotype** (the hap2 file even carries the HPRC contig name JBHIJT010000011.1);
 
 ## What is where
 
-- `results/` - complete output of the workflow run "stage 4" (`hla_pangenome.cwl`, Toil, job 20565053), per haplotype
+- `results/` - complete output of the workflow run "stage 5" on all 754 haplotypes (`hla_pangenome.cwl`, Toil, job 20579466, cohorts with the HPRC population split), per haplotype
   and per gene. Key files:
   - `<sample>_<hap>.mhc.fa` / `.mhc.tsv`: extracted MHC segment(s) (PanSN names `sample#hap#contig:start-end[_rc]`) and extraction stats;
-    `MHC.fa` = all 610 concatenated (3 Gb)
+    `MHC.fa` = all 754 concatenated
   - `<sample>_<hap>.gtf.gz`: Immuannot annotation (IPD-IMGT/HLA 3.55, IPD-KIR 2.13, RefSeq C4)
   - `hla_calls.tsv` (one row per annotated gene copy; use column `consensus`, `:new` = full-length sequence absent from
     IPD-IMGT/HLA; `novel_class` = known / novel_coding / novel_noncoding), `hla_calls_matrix.tsv`, `gene_copy_number.tsv`,
@@ -60,7 +60,7 @@ haplotype** (the hap2 file even carries the HPRC contig name JBHIJT010000011.1);
   - whole MHC: `MHC.bed/.ctg.summary.tsv/.mapg.gfa/.pmapg.gfa/.dist/.nwk/.ord/.svg/.html` (pgr-tk bundles, w=80 k=56 r=6)
 - `mhc_fastas/`, `immuannot_gtfs/` - the same MHC fastas and GTFs as flat folders (inputs for re-runs that skip
   extraction and annotation: `workflow/nig/stage3.sh <mhc_dir> <gtf_dir> <outname>`)
-- `classII/` - DRA..DMA span from every haplotype (`classII.fa`, 461-650 kb each) and its pgr-tk bundle decomposition
+- `classII/` - DRA..DMA span from every haplotype (`classII.fa`, 753 sequences) and its pgr-tk bundle decomposition (890 bundles)
   (`pgr-pbundle-decomp -w 48 -k 56 -r 2 --min-span 8 --bundle-length-cutoff 500 --bundle-merge-distance 2000`):
   `classII.svg/.html` (bundle plot), `.nwk` (dendrogram), `.ord` (bundle presence vectors), `.pmapg.gfa`, `.bed`
 - `read_support/` - 1000G high-coverage Illumina reads of NA18976, NA19909, HG00544, NA18940, NA18952, HG02717, NA20346
@@ -68,8 +68,10 @@ haplotype** (the hap2 file even carries the HPRC contig name JBHIJT010000011.1);
   own assembled haplotype(s) (`run.sh`; `<sample>.<hap>.bam`), per-site allele counts (`*.sites.tsv`), depth per 50 kb,
   hap1-vs-hap2 alignments (`*.h1h2.paf`), base-level pileups at novel codons (`*.novel_pileup.tsv`), 1000G phased MHC
   genotypes of 9 samples (`mhc_9samples.vcf.gz`), Immuannot coding differences of the novel alleles (`novel_coding.tsv`)
-- `figures/` - final figures with `CAPTIONS.md`; `tables/` - novel-allele support, class II haplotype strings, cluster purity,
-  1000G heterozygosity tracks; `slides/` - summary deck (`hla_summary.pdf`, results and methods)
+- `figures/` - final figures with `CAPTIONS.md` (regenerated for 754 haplotypes); `tables/` - call table (`hla_calls.tsv.gz`),
+  copy numbers, novel alleles, class II haplotype strings, cluster purity, typing concordance, HPRC population table;
+  `slides/` - summary deck (`hla_summary.pdf`, results and methods, 26 slides)
+- `results-610/` - the earlier 610-haplotype run (before HPRC split, K-PanRef and CPC)
 - `workflow/` - copy of the repository directory `hla/` (CWL workflow, tools, scripts, analysis scripts, README)
 
 ## How it was generated
@@ -86,11 +88,16 @@ haplotype** (the hap2 file even carries the HPRC contig name JBHIJT010000011.1);
    `toil-cwl-runner workflow/tools/pgr_pbundle.cwl classII/job.yml`.
 5. Read support: `read_support/fetch.sh` (1000G CRAM regions), `read_support/run.sh` (realignment, pileups),
    `workflow/scripts/novel_alleles.py` (Immuannot `cds_mut` to contig coordinates).
-6. Figures: `workflow/analysis/*.py`, run in a directory holding `hla_calls.tsv`, `gene_copy_number.tsv`, `data/` (tables above).
+6. Figures and tables: `bash workflow/nig/make_figures.sh <results> <classII> <viz dir>` runs every `workflow/analysis/*.py` on the
+   cluster; the team folder is refreshed with `workflow/nig/update_share.sh`.
+7. Graph cohorts and rerun: `workflow/nig/kpanref_mhc.sbatch`, `workflow/nig/cpc_mhc.sbatch`, then `workflow/nig/add_graph_cohorts.sbatch`.
+8. Typing: `workflow/nig/fufihla_assemblies.sbatch` (FuFiHLA), `workflow/nig/kg_mhc_reads.sbatch` (1000G reads + T1K),
+   `workflow/analysis/typing_concordance.py`; whole-MHC graph: `workflow/nig/mhc_mc_graph.sbatch`.
 
 ## Caveats
 
-- Novel alleles: only substitution-type differences with read or independent-assembly support should be trusted; indel-only
+- Novel alleles: "novel" means absent from IPD-IMGT/HLA 3.55 (Immuannot); recheck against the newest release (HG02717 DQB1
+  is DQB1*02:180:02, named in 3.56). Only substitution-type differences with read or independent-assembly support should be trusted; indel-only
   "new" alleles are typical HiFi homopolymer errors. APR and JaSaPaGe raw reads are not public, so their novel alleles are
   assembly-only.
 - pgr-query homology fetch of genes (alternative `gene_source: pgr-query`) needs w=24/k=32 (class I) or w=16/k=24 (DRB1).

@@ -18,6 +18,7 @@ cp $R/*.png plots/ 2>/dev/null || true
 # novel coding differences from every GTF (all cohorts)
 python3 $CWL/scripts/novel_alleles.py $R/*.gtf.gz > data/novel_coding_all.tsv
 echo "novel coding rows: $(($(wc -l < data/novel_coding_all.tsv)-1))"
+python3 $CWL/analysis/fig2_extraction.py
 python3 $CWL/analysis/fig5_population.py
 python3 $CWL/analysis/classII_flow_pca.py
 python3 $CWL/analysis/classII_bundles.py

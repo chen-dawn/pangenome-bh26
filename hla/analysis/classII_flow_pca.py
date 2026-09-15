@@ -58,8 +58,8 @@ fig,axes=plt.subplots(2,(len(order)+1)//2,figsize=(6*((len(order)+1)//2),16)); a
 for ax in axes[len(order):]: ax.axis("off")
 for ax,c in zip(axes,order):
     sub=H[H.cohort==c]; alluvial(ax,sub,["DRB345","HLA-DRB1","HLA-DQA1","HLA-DQB1"],"DRhap",f"{SHORT[c]} (n={len(sub)})")
-fig.suptitle("Population-level class II haplotype flow (DRB3/4/5 - DRB1 - DQA1 - DQB1), coloured by secondary DRB gene",fontsize=12)
-fig.tight_layout(); fig.savefig("figures/fig7_classII_flow_by_cohort.png",dpi=140)
+fig.suptitle("Population-level class II haplotype flow (DRB3/4/5 - DRB1 - DQA1 - DQB1), coloured by secondary DRB gene",fontsize=14,y=0.995)
+fig.tight_layout(rect=[0,0,1,0.965],h_pad=3); fig.savefig("figures/fig7_classII_flow_by_cohort.png",dpi=140)
 feat=pd.get_dummies(H[["DRB345","HLA-DRB1","HLA-DQA1","HLA-DQB1","HLA-DQA2","HLA-DQB2"]].astype(str)).astype(float)
 X=feat.values-feat.values.mean(0); U,S,Vt=np.linalg.svd(X,full_matrices=False); pc=U[:,:2]*S[:2]; ev=S**2/np.sum(S**2)
 H["pc1"],H["pc2"]=pc[:,0],pc[:,1]; H["sample"]=[h.split("#")[0] for h in H.index]
