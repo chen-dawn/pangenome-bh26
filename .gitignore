@@ -3,3 +3,8 @@ __pycache__/
 results-*/
 jobstore-*/
 *.log
+hla/results/slides/*.aux
+hla/results/slides/*.nav
+hla/results/slides/*.out
+hla/results/slides/*.snm
+hla/results/slides/*.toc
