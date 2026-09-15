@@ -41,6 +41,10 @@ Decoding the CRAMs needs `GRCh38_full_analysis_set_plus_decoy_hla.fa`. The copy 
 from a001 and the epyc/medium nodes but not from the asianhla node; a readable copy with index is at
 `/home/leechuck/hla/ref1kg/local/GRCh38_full_analysis_set_plus_decoy_hla.fa`.
 
+Test (HG00096, 1,314,104 reads = 657,052 pairs extracted from its MHC CRAM; vg 1.76.1 from Cactus 3.3.0, 8 threads):
+giraffe ran in 26 s using 0.7 GB; 654,059 read pairs (99.5%) have an alignment, 625,590 (95.2%) with MAPQ >= 20.
+Script: `~leechuck/hla/mhcgraph/giraffe_test.sh`.
+
 If giraffe stops with "MHC.dist is newer than MHC.shortread.withzip.min which depends on it" (file copies can reorder
 timestamps; the contents are fine), run `touch MHC.shortread.withzip.min MHC.shortread.zipcodes` in a writable copy.
 
