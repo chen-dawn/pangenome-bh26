@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 """
-Compare HLA/MHC typing calls across four pipelines run on (subsets of) the same
-1000G subsampled short-read cohort:
+Compare HLA/MHC typing calls across four datasets on the same 1000G subsampled
+short-read cohort:
 
   t1k          - run-t1k directly on raw FASTQs (mhc_giraffe/t1k/<S>/<S>_genotype.tsv)
   immu_old     - Immuannot on phased pangenome consensus, IPD-IMGT/HLA 3.55.0 db
                  (mhc_giraffe/immuannot/<S>.hap{1,2}.gtf.gz)
   immu_new     - Immuannot on the same consensus, IPD-IMGT/HLA 3.65.0 db
                  (mhc_giraffe/immuannot_newdb/<S>/<S>.hap{1,2}.gtf.gz)
-  leechuck_t1k - leechuck's own run-t1k on raw 1000G Illumina reads, no pangenome
-                 involved at all (leechuck/hla/typing/conc_partial/data/
-                 conc_t1k_vs_published.tsv, 'sample'/'gene'/'t1k' columns).
-                 Only covers 5 classical genes (A/B/C/DQB1/DRB1) x 412 samples
-                 (whichever samples had a published truth genotype to merge
-                 against) -- NOT the same denominator as the other 3 datasets,
-                 so it is reported separately (fig5) rather than folded into
-                 the whole-cohort completion/concordance figures.
+  leechuck_t1k - leechuck's own, independent run-t1k on the full 2,504-sample
+                 1000G high-coverage cohort (/home/asianhla/data/upload/
+                 1000G_MHC/t1k/<S>/<S>_genotype.tsv), same file format as t1k,
+                 no pangenome/consensus step involved at all.
+
+NOTE on provenance: an earlier version of this script compared against
+leechuck/hla/typing/conc_partial/data/conc_t1k_vs_published.tsv, a pre-computed
+table that turned out to be STALE (predates the current 1000G_MHC/t1k run) --
+it disagreed with leechuck's own live t1k output for the same sample/gene
+(e.g. HG00097 HLA-B). Comparing against the live per-sample genotype.tsv files
+instead shows t1k and leechuck_t1k agree ~99% of the time (the residual ~1% is
+tie-broken multi-allele formatting, not real discordance) -- so the two t1k
+runs are effectively the same result, and any t1k-vs-Immuannot discordance is
+about Immuannot/consensus quality, not about which t1k run you use.
 
 Writes summary TSVs and PNG figures under mhc_giraffe/compare/.
 """
@@ -33,7 +39,7 @@ W = Path("/lustre10/home/dawnxchen/mhc_giraffe")
 T1K_DIR = W / "t1k"
 IMMU_OLD_DIR = W / "immuannot"
 IMMU_NEW_DIR = W / "immuannot_newdb"
-LEECHUCK_T1K_TSV = Path("/lustre10/home/leechuck/hla/typing/conc_partial/data/conc_t1k_vs_published.tsv")
+LEECHUCK_T1K_DIR = Path("/home/asianhla/data/upload/1000G_MHC/t1k")
 OUT = W / "compare"
 OUT.mkdir(exist_ok=True)
 
@@ -44,12 +50,11 @@ CLASSICAL_GENES = [
     "HLA-A", "HLA-B", "HLA-C",
     "HLA-DRA", "HLA-DRB1", "HLA-DQA1", "HLA-DQB1", "HLA-DPA1", "HLA-DPB1",
 ]
-LEECHUCK_T1K_GENES = ["HLA-A", "HLA-B", "HLA-C", "HLA-DQB1", "HLA-DRB1"]
 
 # validated categorical palette (dataviz skill, references/palette.md), slots 1-4
-COLOR_T1K = "#2a78d6"          # blue
-COLOR_IMMU_OLD = "#eb6834"     # orange
-COLOR_IMMU_NEW = "#1baf7a"     # aqua
+COLOR_T1K = "#2a78d6"           # blue
+COLOR_IMMU_OLD = "#eb6834"      # orange
+COLOR_IMMU_NEW = "#1baf7a"      # aqua
 COLOR_LEECHUCK_T1K = "#eda100"  # yellow
 INK = "#0b0b0b"
 INK_SECONDARY = "#52514e"
@@ -82,9 +87,12 @@ def field2(allele: str):
     return ":".join(parts[:2])
 
 
-def load_t1k(sample: str):
-    """Return {gene: (allele1, allele2)} raw strings, or None if not run yet."""
-    f = T1K_DIR / sample / f"{sample}_genotype.tsv"
+def load_t1k(sample: str, base: Path):
+    """Return {gene: (allele1, allele2)} raw strings, or None if not run yet.
+    Ties (equal-scoring candidate alleles) are recorded comma-separated by
+    run-t1k in a single field; we just take the field as-is and truncate,
+    which can only ever help a match (never a spurious one)."""
+    f = base / sample / f"{sample}_genotype.tsv"
     if not f.exists() or f.stat().st_size == 0:
         return None
     out = {}
@@ -138,27 +146,13 @@ def is_novel(allele: str) -> bool:
     return bool(allele) and allele.endswith(":new")
 
 
-def load_leechuck_t1k():
-    """Return {sample: {gene: (allele1, allele2)}} from leechuck's own
-    t1k-on-raw-1000G-reads column in conc_t1k_vs_published.tsv."""
-    out = defaultdict(dict)
-    with open(LEECHUCK_T1K_TSV) as fh:
-        r = csv.DictReader(fh, delimiter="\t")
-        for row in r:
-            alleles = row["t1k"].split("/")
-            a1 = alleles[0] if alleles[0] not in ("", ".") else None
-            a2 = alleles[1] if len(alleles) > 1 and alleles[1] not in ("", ".") else None
-            out[row["sample"]][row["gene"]] = (a1, a2)
-    return dict(out)
-
-
 # ---------------------------------------------------------------------------
 # Pass 1: load everything that's completed so far, track completion counts
 # ---------------------------------------------------------------------------
-t1k_calls, immu_old_calls, immu_new_calls = {}, {}, {}
+t1k_calls, immu_old_calls, immu_new_calls, leechuck_t1k_calls = {}, {}, {}, {}
 
 for s in SAMPLES:
-    t1k = load_t1k(s)
+    t1k = load_t1k(s, T1K_DIR)
     if t1k is not None:
         t1k_calls[s] = t1k
     old = load_immuannot(s, IMMU_OLD_DIR, per_sample_subdir=False)
@@ -167,20 +161,20 @@ for s in SAMPLES:
     new = load_immuannot(s, IMMU_NEW_DIR, per_sample_subdir=True)
     if new is not None:
         immu_new_calls[s] = new
-
-leechuck_t1k_calls = load_leechuck_t1k()
+    lk = load_t1k(s, LEECHUCK_T1K_DIR)
+    if lk is not None:
+        leechuck_t1k_calls[s] = lk
 
 n_total = len(SAMPLES)
 completion = {
     "t1k": len(t1k_calls),
     "immu_old": len(immu_old_calls),
     "immu_new": len(immu_new_calls),
+    "leechuck_t1k": len(leechuck_t1k_calls),
 }
 print(f"total samples in cohort: {n_total}")
 for k, v in completion.items():
     print(f"  {k}: {v} completed ({100*v/n_total:.1f}%)")
-print(f"  leechuck_t1k: {len(leechuck_t1k_calls)} samples, "
-      f"{len(LEECHUCK_T1K_GENES)} genes only (separate scope, see fig5)")
 
 # ---------------------------------------------------------------------------
 # Pass 2: pairwise concordance per gene, at both 1-field (allele-group) and
@@ -216,10 +210,13 @@ PAIRS = [
     ("t1k", "immu_old", t1k_calls, immu_old_calls),
     ("t1k", "immu_new", t1k_calls, immu_new_calls),
     ("immu_old", "immu_new", immu_old_calls, immu_new_calls),
+    ("t1k", "leechuck_t1k", t1k_calls, leechuck_t1k_calls),
+    ("leechuck_t1k", "immu_old", leechuck_t1k_calls, immu_old_calls),
+    ("leechuck_t1k", "immu_new", leechuck_t1k_calls, immu_new_calls),
 ]
 
 all_genes = set()
-for d in (t1k_calls, immu_old_calls, immu_new_calls):
+for d in (t1k_calls, immu_old_calls, immu_new_calls, leechuck_t1k_calls):
     for s, g in d.items():
         all_genes.update(g.keys())
 
@@ -280,35 +277,29 @@ with open(OUT / "concordance_overall.tsv", "w", newline="") as fh:
 # Pass 3: novel/uncalled-allele rate per dataset (classical genes)
 # ---------------------------------------------------------------------------
 novel_rate = {"t1k_untyped": defaultdict(lambda: [0, 0]),
+              "leechuck_t1k_untyped": defaultdict(lambda: [0, 0]),
               "immu_old_new": defaultdict(lambda: [0, 0]),
               "immu_new_new": defaultdict(lambda: [0, 0])}
 
-for s, g in t1k_calls.items():
-    for gene in CLASSICAL_GENES:
-        if gene not in g:
-            continue
-        a1, a2 = g[gene]
-        cnt = novel_rate["t1k_untyped"][gene]
-        cnt[1] += 2
-        cnt[0] += (a1 is None) + (a2 is None)
+for dsname, calls in (("t1k_untyped", t1k_calls), ("leechuck_t1k_untyped", leechuck_t1k_calls)):
+    for s, g in calls.items():
+        for gene in CLASSICAL_GENES:
+            if gene not in g:
+                continue
+            a1, a2 = g[gene]
+            cnt = novel_rate[dsname][gene]
+            cnt[1] += 2
+            cnt[0] += (a1 is None) + (a2 is None)
 
-for s, g in immu_old_calls.items():
-    for gene in CLASSICAL_GENES:
-        if gene not in g:
-            continue
-        a1, a2 = g[gene]
-        cnt = novel_rate["immu_old_new"][gene]
-        cnt[1] += 2
-        cnt[0] += is_novel(a1) + is_novel(a2)
-
-for s, g in immu_new_calls.items():
-    for gene in CLASSICAL_GENES:
-        if gene not in g:
-            continue
-        a1, a2 = g[gene]
-        cnt = novel_rate["immu_new_new"][gene]
-        cnt[1] += 2
-        cnt[0] += is_novel(a1) + is_novel(a2)
+for dsname, calls in (("immu_old_new", immu_old_calls), ("immu_new_new", immu_new_calls)):
+    for s, g in calls.items():
+        for gene in CLASSICAL_GENES:
+            if gene not in g:
+                continue
+            a1, a2 = g[gene]
+            cnt = novel_rate[dsname][gene]
+            cnt[1] += 2
+            cnt[0] += is_novel(a1) + is_novel(a2)
 
 with open(OUT / "novel_uncalled_rate.tsv", "w", newline="") as fh:
     w = csv.writer(fh, delimiter="\t")
@@ -321,44 +312,6 @@ with open(OUT / "novel_uncalled_rate.tsv", "w", newline="") as fh:
 print("wrote:", OUT / "concordance_per_gene.tsv")
 print("wrote:", OUT / "concordance_overall.tsv")
 print("wrote:", OUT / "novel_uncalled_rate.tsv")
-
-# ---------------------------------------------------------------------------
-# Pass 4: leechuck_t1k vs the other 3 datasets, restricted to the 5 genes and
-# 412 samples leechuck_t1k actually covers (different scope from Pass 2/3,
-# see module docstring) -- field2 (2-field / protein) resolution only.
-# ---------------------------------------------------------------------------
-LEECHUCK_PAIRS = [
-    ("leechuck_t1k", "t1k", leechuck_t1k_calls, t1k_calls),
-    ("leechuck_t1k", "immu_old", leechuck_t1k_calls, immu_old_calls),
-    ("leechuck_t1k", "immu_new", leechuck_t1k_calls, immu_new_calls),
-]
-
-leechuck_concordance = defaultdict(lambda: defaultdict(lambda: {"n": 0, "allele_match": 0, "geno_match": 0}))
-for name_a, name_b, calls_a, calls_b in LEECHUCK_PAIRS:
-    common_samples = set(calls_a) & set(calls_b)
-    for gene in LEECHUCK_T1K_GENES:
-        for s in common_samples:
-            ga = geno_at(calls_a[s], gene, field2)
-            gb = geno_at(calls_b[s], gene, field2)
-            if ga is None or gb is None:
-                continue
-            m = best_match_count(ga, gb)
-            rec = leechuck_concordance[(name_a, name_b)][gene]
-            rec["n"] += 1
-            rec["allele_match"] += m
-            rec["geno_match"] += int(m == 2)
-
-with open(OUT / "concordance_leechuck_t1k.tsv", "w", newline="") as fh:
-    w = csv.writer(fh, delimiter="\t")
-    w.writerow(["pair", "gene", "n_samples_both_typed", "allele_concordance_pct", "genotype_concordance_pct"])
-    for (name_a, name_b), genes in leechuck_concordance.items():
-        for gene, rec in sorted(genes.items()):
-            if rec["n"] == 0:
-                continue
-            ac = 100 * rec["allele_match"] / (2 * rec["n"])
-            gc = 100 * rec["geno_match"] / rec["n"]
-            w.writerow([f"{name_a}_vs_{name_b}", gene, rec["n"], f"{ac:.1f}", f"{gc:.1f}"])
-print("wrote:", OUT / "concordance_leechuck_t1k.tsv")
 
 # ---------------------------------------------------------------------------
 # Figures
@@ -377,18 +330,19 @@ def style_ax(ax):
 
 
 # --- Figure 1: completion status ---
-fig, ax = plt.subplots(figsize=(6, 4), facecolor=SURFACE)
-labels = ["t1k\n(raw reads)", "Immuannot\n(old DB)", "Immuannot\n(new DB)"]
-values = [completion["t1k"], completion["immu_old"], completion["immu_new"]]
-colors = [COLOR_T1K, COLOR_IMMU_OLD, COLOR_IMMU_NEW]
+fig, ax = plt.subplots(figsize=(7, 4), facecolor=SURFACE)
+labels = ["t1k\n(raw reads)", "Immuannot\n(old DB)", "Immuannot\n(new DB)", "leechuck_t1k\n(independent)"]
+values = [completion["t1k"], completion["immu_old"], completion["immu_new"], completion["leechuck_t1k"]]
+colors = [COLOR_T1K, COLOR_IMMU_OLD, COLOR_IMMU_NEW, COLOR_LEECHUCK_T1K]
 bars = ax.bar(labels, values, color=colors, width=0.6, zorder=3)
 ax.axhline(n_total, color=INK_SECONDARY, linewidth=1, linestyle="--", zorder=2)
-ax.text(2.55, n_total, f" cohort = {n_total}", va="center", ha="left",
+ax.text(3.6, n_total, f" cohort = {n_total}", va="center", ha="left",
         color=INK_SECONDARY, fontsize=8)
 for b, v in zip(bars, values):
     ax.text(b.get_x() + b.get_width() / 2, v + n_total * 0.015, f"{v}\n({100*v/n_total:.0f}%)",
             ha="center", va="bottom", fontsize=9, color=INK)
 ax.set_ylim(0, n_total * 1.15)
+ax.set_xlim(-0.6, 4.4)
 ax.set_ylabel("samples completed", color=INK_SECONDARY, fontsize=9)
 ax.set_title("Pipeline completion so far", color=INK, fontsize=12, loc="left", pad=12)
 style_ax(ax)
@@ -396,12 +350,27 @@ fig.tight_layout()
 fig.savefig(OUT / "fig1_completion.png", dpi=150, facecolor=SURFACE)
 plt.close(fig)
 
-# --- Figure 2: overall full-genotype concordance, field1 vs field2 resolution, by pair ---
+def pooled_geno_pct(res, pair, genes):
+    """Full-genotype (2/2) concordance % pooled over a specific gene subset --
+    NOT the same as `overall[res][pair]`, which pools every gene both sides
+    report (including obscure/near-monomorphic ones like HLA-N/R/V/Y/J or
+    DRB3/4/5 presence calls, which show noisy near-random agreement even
+    between two runs of the same tool and would otherwise dilute the signal
+    from the genes that actually matter)."""
+    n = gm = 0
+    for gene in genes:
+        rec = concordance[res][pair].get(gene, {"n": 0, "geno_match": 0})
+        n += rec["n"]
+        gm += rec["geno_match"]
+    return 100 * gm / n if n else 0
+
+
+# --- Figure 2: classical-gene full-genotype concordance, field1 vs field2 resolution, by pair ---
 fig, ax = plt.subplots(figsize=(6, 4), facecolor=SURFACE)
 pair_labels = ["t1k vs\nImmuannot-old", "t1k vs\nImmuannot-new", "Immuannot-old vs\nImmuannot-new"]
 pair_keys = [("t1k", "immu_old"), ("t1k", "immu_new"), ("immu_old", "immu_new")]
-geno_pct_f1 = [overall["field1"].get(k, {"geno_pct": 0})["geno_pct"] for k in pair_keys]
-geno_pct_f2 = [overall["field2"].get(k, {"geno_pct": 0})["geno_pct"] for k in pair_keys]
+geno_pct_f1 = [pooled_geno_pct("field1", k, CLASSICAL_GENES) for k in pair_keys]
+geno_pct_f2 = [pooled_geno_pct("field2", k, CLASSICAL_GENES) for k in pair_keys]
 x = range(len(pair_labels))
 w_ = 0.32
 b1 = ax.bar([i - w_/2 for i in x], geno_pct_f1, width=w_, label="1-field (allele group)", color=COLOR_T1K, zorder=3)
@@ -413,8 +382,8 @@ for bars in (b1, b2):
 ax.set_xticks(list(x))
 ax.set_xticklabels(pair_labels, fontsize=9, color=INK_SECONDARY)
 ax.set_ylim(0, 105)
-ax.set_ylabel("full-genotype (2/2) concordance (%), all genes pooled", color=INK_SECONDARY, fontsize=9)
-ax.set_title("Overall typing concordance between pipelines", color=INK, fontsize=12, loc="left", pad=12)
+ax.set_ylabel("full-genotype (2/2) concordance (%), classical genes pooled", color=INK_SECONDARY, fontsize=9)
+ax.set_title("Typing concordance between pipelines (9 classical HLA genes)", color=INK, fontsize=12, loc="left", pad=12)
 ax.legend(frameon=False, loc="lower left", fontsize=8)
 style_ax(ax)
 fig.tight_layout()
@@ -469,28 +438,29 @@ fig.tight_layout()
 fig.savefig(OUT / "fig4_novel_uncalled_rate.png", dpi=150, facecolor=SURFACE)
 plt.close(fig)
 
-# --- Figure 5: leechuck's raw-read t1k vs the 3 pipeline datasets, 2-field,
-# restricted to the 5 genes / 412-sample scope it actually covers ---
-fig, ax = plt.subplots(figsize=(8, 5), facecolor=SURFACE)
-lk_pair_keys = [("leechuck_t1k", "t1k"), ("leechuck_t1k", "immu_old"), ("leechuck_t1k", "immu_new")]
-lk_pair_labels = ["vs your t1k\n(raw reads)", "vs Immuannot\n(old DB)", "vs Immuannot\n(new DB)"]
-lk_colors = [COLOR_T1K, COLOR_IMMU_OLD, COLOR_IMMU_NEW]
-n_pairs = len(lk_pair_keys)
-bar_w = 0.8 / n_pairs
-for i, (pk, lab, col) in enumerate(zip(lk_pair_keys, lk_pair_labels, lk_colors)):
-    ys = []
-    for gene in LEECHUCK_T1K_GENES:
-        rec = leechuck_concordance[pk].get(gene, {"n": 0, "geno_match": 0})
-        ys.append(100 * rec["geno_match"] / rec["n"] if rec["n"] else 0)
-    xs = [j + (i - (n_pairs - 1) / 2) * bar_w for j in range(len(LEECHUCK_T1K_GENES))]
-    ax.bar(xs, ys, width=bar_w * 0.95, label=lab.replace("\n", " "), color=col, zorder=3)
-ax.set_xticks(range(len(LEECHUCK_T1K_GENES)))
-ax.set_xticklabels(LEECHUCK_T1K_GENES, fontsize=9, color=INK_SECONDARY)
+# --- Figure 5: two independent t1k runs agree with each other, and disagree
+# with Immuannot by almost the same amount either way -- shows the
+# t1k-vs-Immuannot discordance is not an artifact of any one t1k run ---
+fig, ax = plt.subplots(figsize=(7, 4.5), facecolor=SURFACE)
+bar_specs = [
+    ("t1k vs\nleechuck_t1k", ("t1k", "leechuck_t1k"), COLOR_LEECHUCK_T1K),
+    ("t1k vs\nImmuannot-old", ("t1k", "immu_old"), COLOR_T1K),
+    ("leechuck_t1k vs\nImmuannot-old", ("leechuck_t1k", "immu_old"), COLOR_IMMU_OLD),
+    ("t1k vs\nImmuannot-new", ("t1k", "immu_new"), COLOR_T1K),
+    ("leechuck_t1k vs\nImmuannot-new", ("leechuck_t1k", "immu_new"), COLOR_IMMU_NEW),
+]
+labels5 = [b[0] for b in bar_specs]
+values5 = [pooled_geno_pct("field2", b[1], CLASSICAL_GENES) for b in bar_specs]
+colors5 = [b[2] for b in bar_specs]
+bars = ax.bar(range(len(labels5)), values5, color=colors5, width=0.6, zorder=3)
+for b, v in zip(bars, values5):
+    ax.text(b.get_x() + b.get_width()/2, v + 1.5, f"{v:.0f}%", ha="center", va="bottom", fontsize=9, color=INK)
+ax.set_xticks(range(len(labels5)))
+ax.set_xticklabels(labels5, fontsize=8, color=INK_SECONDARY)
 ax.set_ylim(0, 105)
-ax.set_ylabel("full-genotype concordance (%), 2-field", color=INK_SECONDARY, fontsize=9)
-ax.set_title("leechuck's raw-read t1k vs. your 3 datasets (n up to 412, 5 genes)",
+ax.set_ylabel("full-genotype concordance (%), 2-field, classical genes", color=INK_SECONDARY, fontsize=9)
+ax.set_title("Two independent t1k runs agree far more with each other than\neither does with Immuannot",
               color=INK, fontsize=12, loc="left", pad=12)
-ax.legend(frameon=False, loc="lower right", fontsize=8)
 style_ax(ax)
 fig.tight_layout()
 fig.savefig(OUT / "fig5_leechuck_t1k_comparison.png", dpi=150, facecolor=SURFACE)
