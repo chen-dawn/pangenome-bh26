@@ -1,0 +1,16 @@
+pair	gene	n_samples_both_typed	allele_concordance_pct	genotype_concordance_pct
+leechuck_t1k_vs_t1k	HLA-A	412	92.7	85.4
+leechuck_t1k_vs_t1k	HLA-B	412	96.0	92.0
+leechuck_t1k_vs_t1k	HLA-C	412	94.8	89.6
+leechuck_t1k_vs_t1k	HLA-DQB1	412	93.3	86.7
+leechuck_t1k_vs_t1k	HLA-DRB1	412	95.6	91.3
+leechuck_t1k_vs_immu_old	HLA-A	162	98.5	96.9
+leechuck_t1k_vs_immu_old	HLA-B	109	100.0	100.0
+leechuck_t1k_vs_immu_old	HLA-C	174	98.3	97.1
+leechuck_t1k_vs_immu_old	HLA-DQB1	170	93.2	87.1
+leechuck_t1k_vs_immu_old	HLA-DRB1	96	60.9	24.0
+leechuck_t1k_vs_immu_new	HLA-A	137	98.5	97.1
+leechuck_t1k_vs_immu_new	HLA-B	88	100.0	100.0
+leechuck_t1k_vs_immu_new	HLA-C	150	98.0	96.7
+leechuck_t1k_vs_immu_new	HLA-DQB1	144	93.1	86.8
+leechuck_t1k_vs_immu_new	HLA-DRB1	83	61.4	25.3

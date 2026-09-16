@@ -1,0 +1,7 @@
+resolution	pair	n_gene_sample_obs	allele_concordance_pct	genotype_concordance_pct
+field1	t1k_vs_immu_old	50075	72.2	47.4
+field1	t1k_vs_immu_new	13412	71.4	45.9
+field1	immu_old_vs_immu_new	13422	96.8	93.7
+field2	t1k_vs_immu_old	39370	62.2	32.6
+field2	t1k_vs_immu_new	10843	62.5	32.7
+field2	immu_old_vs_immu_new	10867	92.8	85.6
