@@ -85,6 +85,24 @@
   \end{itemize}
 \end{frame}
 
+\begin{frame}{Neither t1k run touches the pangenome graph -- only Immuannot does}
+  \begin{itemize}\small
+    \item \texttt{mhc\_pipeline.sbatch} labels its own t1k step ``independent of the graph/phasing steps above'' (line 144) -- both t1k runs (this pipeline's and leechuck's) type directly off raw FASTQs, no giraffe/vg/consensus step involved
+    \item The \emph{only} pangenome-derived arm in this whole comparison is Immuannot, which types the vg giraffe $\to$ \texttt{vg call} $\to$ WhatsHap $\to$ \texttt{bcftools consensus} sequence
+    \item So ``did the pangenome alignment improve typing'' really means: does Immuannot-on-pangenome-consensus beat t1k? Checked directly against real published truth genotypes on the next slide (Gourraud et al. 2014 1000G HLA diversity panel, Sanger/SSO typing, 955 samples also in this cohort)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{When Immuannot commits to a 2-field call, it's as accurate as t1k -- but it commits far less often}
+  \centering
+  \includegraphics[width=0.4\textwidth]{gc_truth_concordance.png}
+  \begin{itemize}\footnotesize
+    \item Tied on accuracy: t1k 98.8\%, Immuannot 98.5\% (either DB) full-genotype match to published truth (2-field, 5 classical genes)
+    \item Denominators aren't comparable though: t1k resolves 90\% of its truth-eligible calls to 2-field (n=1843); Immuannot only 33\% (n=613) -- the rest are \texttt{:new}/low-resolution calls (slide 7), uncheckable, not wrong
+    \item So: pangenome alignment + phasing doesn't demonstrably change per-call accuracy -- it costs \emph{resolution/coverage}, not correctness
+  \end{itemize}
+\end{frame}
+
 \begin{frame}{Correction: an earlier pass compared against a stale precomputed table}
   \begin{itemize}\small
     \item First attempt used \texttt{leechuck/hla/typing/conc\_partial/data/conc\_t1k\_vs\_published.tsv} (412 samples, 5 genes) as ``leechuck's t1k'' -- it showed only 86\% agreement with this pipeline's t1k, and disagreements looked like a coverage/read-extraction effect (traced, incorrectly, to the 16 GRCh38 chr6 MHC ALT contigs missing from this pipeline's read extraction)
@@ -97,11 +115,12 @@
 
 \begin{frame}{Take-home}
   \begin{itemize}\small
-    \item Immuannot's database version (3.55 vs 3.65) barely matters here (89--91\% agreement, classical genes); the consensus sequence quality from graph alignment + WhatsHap phasing is the real bottleneck, especially for A/B/C/DQB1/DPB1 (70--88\% flagged novel) and DRB1 (concordance collapses even DB-vs-DB)
-    \item t1k-vs-Immuannot discordance ($\approx$ 49--50\%, classical genes) is real: a second, fully independent t1k run on all 2,504 samples shows essentially the same gap, not an artifact of one t1k invocation
-    \item t1k is still the more trustworthy call for benchmarking, per the pipeline's own documented phasing caveat -- Immuannot types off a phased consensus, t1k does not
-    \item Open: revisit DRB1 specifically (worst locus everywhere, including DB-vs-DB) once Immuannot-new-DB finishes the full cohort; understand why HLA-DRA/DPA1 specifically show more t1k-run-to-run disagreement than A/B/C/DRB1/DQB1 do
-    \item Script, figures, tables: \texttt{pangenome-bh26/hla/analysis/gc\_typing\_concordance.py}, \texttt{results/figures/gc\_*.png}, \texttt{results/tables/gc\_*.tsv}
+    \item \textbf{Pangenome alignment did not improve typing accuracy here} -- against real published truth, Immuannot-on-pangenome-consensus (98.5\%) and t1k (98.8\%) are statistically tied when Immuannot actually commits to an answer. The pangenome/phasing arm's real cost is \emph{resolution}: it only reaches a checkable 2-field call 33\% of the time vs. t1k's 90\%
+    \item Immuannot's database version (3.55 vs 3.65) barely matters (89--91\% agreement, classical genes); the consensus sequence quality from graph alignment + WhatsHap phasing is the real bottleneck, especially for A/B/C/DQB1/DPB1 (70--88\% flagged novel) and DRB1 (concordance collapses even DB-vs-DB)
+    \item t1k-vs-Immuannot discordance ($\approx$ 49--50\%, classical genes) is real and confirmed by a second, fully independent t1k run -- not an artifact of one t1k invocation
+    \item t1k remains the more practically useful call for benchmarking: same accuracy as Immuannot when both can be checked, but usable on far more calls
+    \item Open: revisit DRB1 specifically (worst locus everywhere, including DB-vs-DB) once Immuannot-new-DB finishes the full cohort; understand why HLA-DRA/DPA1 show more t1k-run-to-run disagreement than A/B/C/DRB1/DQB1 do
+    \item Script, figures, tables: \texttt{pangenome-bh26/hla/analysis/gc\_*.py}, \texttt{results/figures/gc\_*.png}, \texttt{results/tables/gc\_*.tsv}
   \end{itemize}
 \end{frame}
 

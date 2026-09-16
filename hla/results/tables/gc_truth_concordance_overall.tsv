@@ -1,0 +1,5 @@
+dataset	n_gene_sample_obs	allele_concordance_pct	genotype_concordance_pct
+t1k	1843	99.4	98.8
+leechuck_t1k	4308	98.1	96.5
+immu_old	613	99.2	98.5
+immu_new	613	99.2	98.5
